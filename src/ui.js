@@ -61,6 +61,9 @@ export class UI {
       lineCounter: document.getElementById('line-counter'),
       lyricsDisplay: document.getElementById('lyrics-display'),
       btnAddLine: document.getElementById('btn-add-line'),
+      btnAdjustDown: document.getElementById('btn-adjust-down'),
+      btnAdjustUp: document.getElementById('btn-adjust-up'),
+      btnMark: document.getElementById('btn-mark'),
       btnBack3: document.getElementById('btn-back-3'),
       btnNext3: document.getElementById('btn-next-3'),
       
@@ -148,6 +151,19 @@ export class UI {
     // Add line button
     this.elements.btnAddLine?.addEventListener('click', () => {
       this._addNewLine();
+    });
+    
+    // Mobile sync controls
+    this.elements.btnAdjustDown?.addEventListener('click', () => {
+      this._adjustTimestamp(-0.1);
+    });
+    
+    this.elements.btnAdjustUp?.addEventListener('click', () => {
+      this._adjustTimestamp(0.1);
+    });
+    
+    this.elements.btnMark?.addEventListener('click', () => {
+      this._markCurrentLine();
     });
     
     // Step 4: Export buttons
@@ -1024,6 +1040,32 @@ export class UI {
       this._isUserSeeking = false;
       this._seekTimeoutId = null;
     }, 200);
+  }
+  
+  /**
+   * Adjust timestamp of selected line (for mobile buttons)
+   * @param {number} delta - Time adjustment in seconds
+   */
+  _adjustTimestamp(delta) {
+    if (!this.editor.hasLyrics) return;
+    
+    const newTime = this.editor.adjustTimestamp(delta);
+    this._jumpToTime(newTime);
+  }
+  
+  /**
+   * Mark current line with current playback time and advance (tap-to-sync)
+   */
+  _markCurrentLine() {
+    if (!this.editor.hasLyrics) return;
+    
+    const currentTime = this.player.currentTime;
+    this.editor.markAndAdvance(currentTime);
+    
+    // Start playing if not already (auto-play on mark)
+    if (!this.player.isPlaying) {
+      this.player.play();
+    }
   }
   
   _updateLrcPreview() {

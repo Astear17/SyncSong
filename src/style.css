@@ -124,6 +124,23 @@
     @apply translate-x-4 bg-white;
   }
 
+  /* Sync controls toolbar */
+  .sync-controls {
+    @apply p-2;
+  }
+
+  .sync-btn {
+    @apply flex flex-col items-center justify-center w-16 h-14 rounded-lg
+           bg-slate-700 hover:bg-slate-600 active:bg-slate-500
+           text-slate-200 transition-all duration-150
+           focus:outline-none focus:ring-2 focus:ring-primary-500
+           touch-manipulation select-none;
+  }
+
+  .sync-btn-mark {
+    @apply w-20 bg-primary-600 hover:bg-primary-500 active:bg-primary-400 text-white;
+  }
+
   .modal {
     @apply fixed inset-0 z-50 flex items-center justify-center;
   }

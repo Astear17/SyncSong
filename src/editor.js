@@ -107,6 +107,28 @@ export class LyricEditor {
   }
   
   /**
+   * Mark current line with timestamp and advance to next line
+   * @param {number} currentTime - Current playback time
+   * @returns {{ markedIndex: number, nextIndex: number }} Indices of marked and next lines
+   */
+  markAndAdvance(currentTime) {
+    const markedIndex = this.selectedIndex;
+    
+    // Set timestamp for current line
+    this.setTimestamp(markedIndex, currentTime);
+    
+    // Advance to next line (if not at end)
+    if (this.selectedIndex < this.lines.length - 1) {
+      this.selectNextLine();
+    }
+    
+    return {
+      markedIndex,
+      nextIndex: this.selectedIndex
+    };
+  }
+  
+  /**
    * Get currently selected line
    * @returns {{ time: number, text: string, id: number } | null}
    */

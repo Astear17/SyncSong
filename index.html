@@ -217,7 +217,7 @@
         <!-- Instructions -->
         <div class="bg-slate-800/50 border border-slate-700 rounded-lg p-3 mb-3 text-sm text-slate-400">
           <p>👆 <strong class="text-slate-300">Tap a line</strong> to jump to that timestamp and start playing</p>
-          <p>🎚️ <strong class="text-slate-300">Use ↑/↓ arrows</strong> to adjust the selected line's timestamp by 0.1s</p>
+          <p>� <strong class="text-slate-300">Use Mark</strong> to set the current line's timestamp to now</p>
         </div>
 
         <!-- Synced lyrics display -->
@@ -229,14 +229,30 @@
           <p class="text-slate-500 text-center py-8">Loading...</p>
         </div>
 
+        <!-- Mobile-friendly sync controls -->
+        <div class="sync-controls mt-3 flex items-center justify-center gap-2">
+          <button id="btn-adjust-down" class="sync-btn" title="Decrease timestamp by 0.1s">
+            <span class="text-lg">−</span>
+            <span class="text-xs">0.1s</span>
+          </button>
+          <button id="btn-mark" class="sync-btn sync-btn-mark" title="Set timestamp to current time and advance">
+            <span class="text-lg">🎯</span>
+            <span class="text-xs">Mark</span>
+          </button>
+          <button id="btn-adjust-up" class="sync-btn" title="Increase timestamp by 0.1s">
+            <span class="text-lg">+</span>
+            <span class="text-xs">0.1s</span>
+          </button>
+        </div>
+
         <!-- Keyboard hints and Add Line button -->
         <div class="mt-3 flex items-center justify-between text-xs text-slate-500">
-          <div>
+          <div class="hidden sm:block">
             <kbd class="kbd">↑</kbd><kbd class="kbd">↓</kbd> adjust · 
             <kbd class="kbd">Space</kbd> play/pause · 
             <kbd class="kbd">Enter</kbd> next
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 ml-auto">
             <span id="line-counter"></span>
             <button id="btn-add-line" class="btn btn-secondary text-xs px-2 py-1" title="Add new line at current time">
               + Add Line
