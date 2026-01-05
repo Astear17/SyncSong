@@ -34,6 +34,7 @@ export class UI {
       songFilename: document.getElementById('song-filename'),
       songDuration: document.getElementById('song-duration'),
       btnChangeSong: document.getElementById('btn-change-song'),
+      btnTryDemo: document.getElementById('btn-try-demo'),
       
       // Step 2: Lyrics
       btnSearchLrclib: document.getElementById('btn-search-lrclib'),
@@ -113,6 +114,9 @@ export class UI {
     this.elements.btnChangeSong?.addEventListener('click', () => {
       this.elements.songInfo.classList.add('hidden');
       this.elements.audioDropZone.classList.remove('hidden');
+    });
+    this.elements.btnTryDemo?.addEventListener('click', () => {
+      this._loadDemo();
     });
     
     // Step 2: lrclib search
@@ -227,6 +231,107 @@ export class UI {
     await this._extractAudioMetadata(file);
     
     // Auto-advance to step 2
+    this._goToStep(2);
+  }
+  
+  /**
+   * Load demo song and lyrics for users to try the app
+   */
+  async _loadDemo() {
+    const demoSongUrl = 'https://c.madeye.dev/syncsongdemo.mp3';
+    const demoTitle = 'Sing It Wrong';
+    const demoArtist = 'Joshua Hendricks';
+    
+    // Demo lyrics (unsynced)
+    const demoLyrics = `Pulled up at the red light
+Windows down, I'm feelin' brave
+Belting out that power ballad
+Like I'm center stage
+"I can see clearly now, Lorraine is gone"
+Yeah I hit that note so proud
+'Til my girl starts cry-laugh-crying
+Rollin' in the passenger seat, way too loud
+
+I sing it wrong, sing it strong
+Got the messed up words, but the vibe's still on
+Bone apple tea to the fancy song
+If it sounds kinda right, I'm gonna sing along
+Yeah, call me out, I'll just sing it louder
+Confidence, baby, that's my superpower
+I sing it wrong, sing it strong
+But you're still dancin' when you hear this song
+
+At church I went full gospel
+Thought I knew that chorus line
+"Round John Virgin, mother and child"
+Pastor gave me side-eye from the shrine
+At the bar it's classic rock night
+I'm their beautiful disaster, man
+"Hold me closer, Tony Danza"
+Got the whole place clappin' with their cans
+
+I sing it wrong, sing it strong
+Got the messed up words, but the vibe's still on
+Bone apple tea to the fancy song
+If it sounds kinda right, I'm gonna sing along
+Yeah, call me out, I'll just sing it louder
+Confidence, baby, that's my superpower
+I sing it wrong, sing it strong
+But you're still dancin' when you hear this song
+
+Your mama in the kitchen like, "Boy, behave"
+But I still toast up, "Bone apple tea," wave
+Misheard grace, got a gravy stain prayer
+"Lead us not into Penn Station" in the air
+Your playlist's poetry, mine's karaoke crime
+But I turn wrong lyrics into pickup lines
+Leanin' in close, low and slow, I grin
+"Is it you're the one that I want, or you're the one that I won?"
+
+I sing it wrong, sing it strong
+Got the messed up words, but the vibe's still on
+Bone apple tea to the fancy song
+If it sounds kinda right, I'm gonna sing along
+Yeah, call me out, I'll just sing it louder
+Confidence, baby, that's my superpower
+I sing it wrong, sing it strong
+But you're still dancin' when you hear this song`;
+
+    // Load audio from URL
+    this.player.loadUrl(demoSongUrl, `${demoArtist} - ${demoTitle}`);
+    
+    // Update UI to show song is loaded
+    this.elements.songFilename.textContent = `${demoArtist} - ${demoTitle}`;
+    this.elements.songInfo.classList.remove('hidden');
+    this.elements.audioDropZone.classList.add('hidden');
+    
+    // Set metadata
+    this.audioMetadata = {
+      artist: demoArtist,
+      title: demoTitle,
+      album: null
+    };
+    
+    // Update track name display
+    if (this.elements.trackName) {
+      this.elements.trackName.textContent = `${demoArtist} - ${demoTitle}`;
+    }
+    
+    // Pre-fill metadata fields
+    if (this.elements.metaArtist) {
+      this.elements.metaArtist.value = demoArtist;
+    }
+    if (this.elements.metaTitle) {
+      this.elements.metaTitle.value = demoTitle;
+    }
+    
+    // Pre-fill lyrics textarea
+    if (this.elements.lyricsInput) {
+      this.elements.lyricsInput.value = demoLyrics;
+      this._updateLyricsNextButton();
+    }
+    
+    // Go to step 2
     this._goToStep(2);
   }
   

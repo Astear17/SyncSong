@@ -50,10 +50,13 @@ export class AudioPlayer {
     
     this._setupEventListeners();
     
-    // Load pending file if any
+    // Load pending file or URL if any
     if (this._pendingFile) {
       this._loadFileInternal(this._pendingFile);
       this._pendingFile = null;
+    } else if (this._pendingUrl) {
+      this.wavesurfer.load(this._pendingUrl);
+      this._pendingUrl = null;
     }
   }
   
@@ -119,6 +122,24 @@ export class AudioPlayer {
     }
     
     this._loadFileInternal(file);
+  }
+  
+  /**
+   * Load audio from a URL
+   * @param {string} url - Audio URL
+   * @param {string} [displayName] - Display name for the track
+   */
+  loadUrl(url, displayName = 'Audio') {
+    this._isReady = false;
+    this.fileName = displayName;
+    
+    if (!this.wavesurfer) {
+      // Store URL to load when init is called
+      this._pendingUrl = url;
+      return;
+    }
+    
+    this.wavesurfer.load(url);
   }
   
   /**
