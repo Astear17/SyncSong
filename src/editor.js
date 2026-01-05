@@ -50,32 +50,11 @@ export class LyricEditor {
   }
   
   /**
-   * Apply auto-generated timestamps based on audio duration
-   * @param {number} duration - Audio duration in seconds
+   * Check if lyrics have any unsynced lines (null timestamps)
+   * @returns {boolean}
    */
-  autoSyncTimestamps(duration) {
-    if (this.lines.length === 0) return;
-    
-    const hasUnsynced = this.lines.some(l => l.time === null);
-    
-    if (hasUnsynced) {
-      // Generate evenly distributed timestamps
-      const nonEmptyCount = this.lines.filter(l => l.text.trim()).length;
-      const interval = duration / Math.max(nonEmptyCount, 1);
-      
-      let timeIndex = 0;
-      this.lines = this.lines.map((line, index) => {
-        if (line.time !== null) {
-          return line;
-        }
-        const time = line.text.trim() ? timeIndex++ * interval : index * interval;
-        return { ...line, time };
-      });
-      
-      if (this.onLyricsChange) {
-        this.onLyricsChange(this.lines, this.metadata);
-      }
-    }
+  hasUnsyncedLines() {
+    return this.lines.some(l => l.time === null);
   }
   
   /**
@@ -147,12 +126,13 @@ export class LyricEditor {
     const line = this.lines[this.selectedIndex];
     if (!line) return 0;
     
-    // Calculate bounds based on adjacent lines
+    // Calculate bounds based on adjacent lines (only if they have timestamps)
     const prevLine = this.lines[this.selectedIndex - 1];
     const nextLine = this.lines[this.selectedIndex + 1];
     
-    const minTime = prevLine?.time ?? 0;
-    const maxTime = nextLine?.time ?? Infinity;
+    // Only use bounds from lines that have actual timestamps
+    const minTime = (prevLine?.time !== null && prevLine?.time !== undefined) ? prevLine.time : 0;
+    const maxTime = (nextLine?.time !== null && nextLine?.time !== undefined) ? nextLine.time : Infinity;
     
     // Clamp the new time within bounds
     let newTime = (line.time || 0) + delta;

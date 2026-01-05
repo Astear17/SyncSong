@@ -181,10 +181,12 @@ export function serializeLRC(data) {
     output.push('');
   }
   
-  // Add lyric lines
+  // Add lyric lines (only include lines that have timestamps)
   for (const line of lines) {
-    const timestamp = formatTimestamp(line.time);
-    output.push(`${timestamp}${line.text}`);
+    if (line.time !== null) {
+      const timestamp = formatTimestamp(line.time);
+      output.push(`${timestamp}${line.text}`);
+    }
   }
   
   return output.join('\n');

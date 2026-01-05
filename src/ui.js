@@ -14,6 +14,7 @@ export class UI {
     this.editingLineIndex = null; // Track which line is being edited
     this._isUserSeeking = false; // Prevent auto-selection during user-initiated seeks
     this._seekTimeoutId = null; // Debounce timeout for user seeking
+    this._isMarkingMode = false; // Prevent auto-selection during tap-to-sync marking
     this.audioMetadata = null; // Extracted audio file metadata (artist, title, album, duration)
     
     // Cache DOM elements
@@ -452,11 +453,6 @@ export class UI {
     data.metadata.album = this.elements.metaAlbum?.value || data.metadata.album;
     
     this.editor.loadLyrics(data);
-    
-    // Auto-sync if audio is loaded
-    if (this.player.duration > 0) {
-      this.editor.autoSyncTimestamps(this.player.duration);
-    }
   }
   
   async _openLrclibSearch() {
@@ -623,8 +619,8 @@ export class UI {
       const playingIndex = this.editor.updatePlayingLine(time);
       this._highlightPlayingLine(playingIndex);
       
-      // Only auto-select line if playing
-      if (this.player.isPlaying && playingIndex >= 0 && playingIndex !== this.editor.selectedIndex) {
+      // Only auto-select line if playing (and not in tap-to-sync mode)
+      if (this.player.isPlaying && playingIndex >= 0 && playingIndex !== this.editor.selectedIndex && !this._isMarkingMode) {
         this.editor.selectLine(playingIndex);
       }
     };
@@ -635,9 +631,6 @@ export class UI {
       }
       if (this.elements.songDuration) {
         this.elements.songDuration.textContent = AudioPlayer.formatTime(duration);
-      }
-      if (this.editor.hasLyrics) {
-        this.editor.autoSyncTimestamps(duration);
       }
     };
     
@@ -657,6 +650,9 @@ export class UI {
       const pauseIcon = document.getElementById('pause-icon');
       if (playIcon) playIcon.classList.remove('hidden');
       if (pauseIcon) pauseIcon.classList.add('hidden');
+      
+      // Exit marking mode when paused
+      this._exitMarkingMode();
     };
   }
   
@@ -698,6 +694,9 @@ export class UI {
         if (this.editingLineIndex !== null) {
           this._exitEditMode();
         }
+        
+        // Exit marking mode when manually selecting a line
+        this._exitMarkingMode();
         
         this.editor.selectLine(index);
         const line = this.editor.lines[index];
@@ -984,7 +983,7 @@ export class UI {
     if (lineEl) {
       const timestampEl = lineEl.querySelector('.lyric-timestamp');
       if (timestampEl) {
-        timestampEl.textContent = formatTimestamp(line.time);
+        timestampEl.textContent = line.time !== null ? formatTimestamp(line.time) : '--:--';
       }
     }
   }
@@ -1059,6 +1058,9 @@ export class UI {
   _markCurrentLine() {
     if (!this.editor.hasLyrics) return;
     
+    // Enable marking mode to prevent auto-selection from overriding
+    this._isMarkingMode = true;
+    
     const currentTime = this.player.currentTime;
     this.editor.markAndAdvance(currentTime);
     
@@ -1066,6 +1068,13 @@ export class UI {
     if (!this.player.isPlaying) {
       this.player.play();
     }
+  }
+  
+  /**
+   * Exit marking mode (called when user manually selects a line or pauses)
+   */
+  _exitMarkingMode() {
+    this._isMarkingMode = false;
   }
   
   _updateLrcPreview() {
