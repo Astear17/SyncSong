@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Create and edit synced lyrics in LRC format">
+  <meta name="theme-color" content="#6366f1">
+  <title>SyncSong</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/pwa/icon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/pwa/icon-16x16.png">
+  <link rel="apple-touch-icon" href="/pwa/icon-152x152.png">
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+  <div id="app" class="flex flex-col min-h-screen">
+    <!-- Header -->
+    <header class="bg-slate-800 border-b border-slate-700 px-4 py-3">
+      <div class="max-w-2xl mx-auto flex items-center justify-between">
+        <h1 class="text-xl font-bold text-primary-400 flex items-center gap-2">
+          <img src="/splitwave.svg" alt="" class="h-6 w-auto">
+          SyncSong
+        </h1>
+        <script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" data-id="joshooaj" data-description="Support me on Buy me a coffee!" data-message="If you LOVE this, consider supporting the dev 🤘" data-color="#5F7FFF" data-position="Right" data-x_margin="18" data-y_margin="18"></script>
+      </div>
+    </header>
+
+    <!-- Progress Steps -->
+    <nav class="bg-slate-800/50 border-b border-slate-700 px-4 py-3">
+      <div class="max-w-2xl mx-auto">
+        <div class="flex items-center justify-between">
+          <button class="step-indicator active" data-step="1">
+            <span class="step-num">1</span>
+            <span class="step-label">Song</span>
+          </button>
+          <div class="step-connector"></div>
+          <button class="step-indicator" data-step="2">
+            <span class="step-num">2</span>
+            <span class="step-label">Lyrics</span>
+          </button>
+          <div class="step-connector"></div>
+          <button class="step-indicator" data-step="3">
+            <span class="step-num">3</span>
+            <span class="step-label">Sync</span>
+          </button>
+          <div class="step-connector"></div>
+          <button class="step-indicator" data-step="4">
+            <span class="step-num">4</span>
+            <span class="step-label">Export</span>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-2xl mx-auto w-full p-4">
+      
+      <!-- Step 1: Add Song -->
+      <section id="step-1-content" class="wizard-step">
+        <div class="text-center mb-6">
+          <h2 class="text-2xl font-bold text-slate-200 mb-2">Add Your Song</h2>
+          <p class="text-slate-400">Drop an audio file to get started</p>
+        </div>
+        
+        <div id="audio-drop-zone" class="drop-zone-large">
+          <div class="text-center">
+            <div class="text-6xl mb-4">🎵</div>
+            <p class="text-slate-200 font-medium text-lg mb-2">Drop audio file here</p>
+            <p class="text-slate-500">or click to browse</p>
+            <p class="text-slate-600 text-sm mt-4">MP3, FLAC, OGG, M4A, WAV</p>
+          </div>
+        </div>
+        
+        <!-- Song info (shown after loading) -->
+        <div id="song-info" class="hidden mt-6">
+          <div class="bg-slate-800 rounded-lg p-4">
+            <div class="flex items-center gap-4">
+              <div class="text-4xl">🎵</div>
+              <div class="flex-1 min-w-0">
+                <p id="song-filename" class="font-medium text-slate-200 truncate"></p>
+                <p id="song-duration" class="text-sm text-slate-400"></p>
+              </div>
+              <button id="btn-change-song" class="btn btn-secondary text-sm">Change</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Shared Audio Player (shown on steps 2 and 3) -->
+      <div id="player-panel" class="rounded-lg p-4 mb-4 hidden">
+        <div class="flex items-center gap-3">
+          <!-- Circle play button with SVG -->
+          <button id="btn-play" class="w-11 h-11 rounded-full border-2 border-primary-400 text-primary-400 hover:bg-primary-400 hover:text-slate-900 flex items-center justify-center flex-shrink-0 transition-colors">
+            <svg id="play-icon" class="w-5 h-5 ml-0.5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+            <svg id="pause-icon" class="w-5 h-5 hidden" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+            </svg>
+          </button>
+          <!-- Waveform container -->
+          <div id="waveform" class="flex-1 rounded overflow-hidden"></div>
+        </div>
+        <!-- Bottom row: Track name, Auto-play toggle and time -->
+        <div class="flex items-center gap-4 mt-2">
+          <span id="track-name" class="flex-1 text-sm text-slate-300 truncate"></span>
+          <label class="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
+            <span>Auto-play</span>
+            <div class="toggle-switch">
+              <input type="checkbox" id="auto-play-toggle" checked>
+              <span class="toggle-slider"></span>
+            </div>
+          </label>
+          <div class="flex items-center gap-1 text-sm font-mono text-slate-300">
+            <span id="time-current">0:00</span>
+            <span class="text-slate-600">/</span>
+            <span id="time-total">0:00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Add Lyrics -->
+      <section id="step-2-content" class="wizard-step hidden">
+        <div class="text-center mb-6">
+          <h2 class="text-2xl font-bold text-slate-200 mb-2">Add Lyrics</h2>
+          <p class="text-slate-400">Import, paste, or type your lyrics</p>
+        </div>
+
+        <!-- Player slot for step 2 -->
+        <div id="player-slot-2"></div>
+
+        <!-- Import buttons row -->
+        <div class="flex gap-2 mb-4">
+          <button id="btn-search-lrclib" class="btn btn-secondary flex-1 flex items-center justify-center gap-2">
+            <span>🔍</span> Search LRCLIB
+          </button>
+          <button id="btn-open-lyrics" class="btn btn-secondary flex-1 flex items-center justify-center gap-2">
+            <span>📂</span> Open File
+          </button>
+        </div>
+
+        <!-- lrclib search panel -->
+        <div id="lrclib-search" class="hidden mb-4">
+          <div class="bg-slate-800 rounded-lg p-4">
+            <div class="flex gap-2 mb-3">
+              <input type="text" id="lrclib-query" class="input-field flex-1" placeholder="Search by artist, title...">
+              <button id="btn-lrclib-search" class="btn btn-primary">Search</button>
+            </div>
+            <div id="lrclib-results" class="max-h-48 overflow-y-auto">
+              <p class="text-slate-500 text-sm text-center py-4">Enter a search query</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lyrics textarea (also accepts drag & drop) -->
+        <div class="mb-4">
+          <textarea 
+            id="lyrics-input" 
+            class="lyrics-textarea"
+            placeholder="Paste LRC content, type lyrics, or drag & drop a .lrc/.txt file here..."
+          ></textarea>
+        </div>
+
+        <!-- Metadata (optional) -->
+        <details class="mb-6">
+          <summary class="text-sm text-slate-400 cursor-pointer hover:text-slate-300">
+            ▶ Edit metadata (optional)
+          </summary>
+          <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs text-slate-500 mb-1">Artist</label>
+              <input type="text" id="meta-artist" class="input-field" placeholder="Artist name">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1">Title</label>
+              <input type="text" id="meta-title" class="input-field" placeholder="Track title">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1">Album</label>
+              <input type="text" id="meta-album" class="input-field" placeholder="Album name">
+            </div>
+          </div>
+        </details>
+
+        <div class="flex justify-between">
+          <button id="btn-back-2" class="btn btn-secondary">← Back</button>
+          <button id="btn-next-2" class="btn btn-primary" disabled>
+            Next: Sync →
+          </button>
+        </div>
+      </section>
+
+      <!-- Step 3: Sync Lyrics -->
+      <section id="step-3-content" class="wizard-step hidden">
+        <div class="text-center mb-4">
+          <h2 class="text-2xl font-bold text-slate-200 mb-1">Sync Lyrics</h2>
+          <p class="text-slate-400 text-sm">Adjust timestamps while listening</p>
+        </div>
+
+        <!-- Player slot for step 3 -->
+        <div id="player-slot-3"></div>
+
+        <!-- Instructions -->
+        <div class="bg-slate-800/50 border border-slate-700 rounded-lg p-3 mb-3 text-sm text-slate-400">
+          <p>👆 <strong class="text-slate-300">Tap a line</strong> to jump to that timestamp and start playing</p>
+          <p>🎚️ <strong class="text-slate-300">Use ↑/↓ arrows</strong> to adjust the selected line's timestamp by 0.1s</p>
+        </div>
+
+        <!-- Synced lyrics display -->
+        <div 
+          id="lyrics-display" 
+          class="h-72 bg-slate-800 border border-slate-700 rounded-lg p-3 overflow-y-auto focus:outline-none focus:ring-2 focus:ring-primary-500"
+          tabindex="0"
+        >
+          <p class="text-slate-500 text-center py-8">Loading...</p>
+        </div>
+
+        <!-- Keyboard hints and Add Line button -->
+        <div class="mt-3 flex items-center justify-between text-xs text-slate-500">
+          <div>
+            <kbd class="kbd">↑</kbd><kbd class="kbd">↓</kbd> adjust · 
+            <kbd class="kbd">Space</kbd> play/pause · 
+            <kbd class="kbd">Enter</kbd> next
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="line-counter"></span>
+            <button id="btn-add-line" class="btn btn-secondary text-xs px-2 py-1" title="Add new line at current time">
+              + Add Line
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-6 flex justify-between">
+          <button id="btn-back-3" class="btn btn-secondary">← Back</button>
+          <button id="btn-next-3" class="btn btn-primary">Next: Export →</button>
+        </div>
+      </section>
+
+      <!-- Step 4: Export -->
+      <section id="step-4-content" class="wizard-step hidden">
+        <div class="text-center mb-6">
+          <h2 class="text-2xl font-bold text-slate-200 mb-2">Export Lyrics</h2>
+          <p class="text-slate-400">Download or share your synced lyrics</p>
+        </div>
+
+        <!-- Preview -->
+        <div class="mb-6">
+          <label class="block text-sm text-slate-400 mb-2">PREVIEW</label>
+          <pre id="lrc-preview" class="bg-slate-800 border border-slate-700 rounded-lg p-4 text-sm font-mono text-slate-300 h-48 overflow-y-auto whitespace-pre-wrap"></pre>
+        </div>
+
+        <!-- Export options -->
+        <div class="space-y-3 mb-6">
+          <button id="btn-copy" class="btn btn-secondary w-full flex items-center justify-center gap-2">
+            <span>📋</span> Copy to Clipboard
+          </button>
+          <button id="btn-download" class="btn btn-primary w-full flex items-center justify-center gap-2">
+            <span>💾</span> Download LRC File
+          </button>
+        </div>
+
+        <div class="divider-text mb-6">
+          <span>or publish online</span>
+        </div>
+
+        <!-- Publish to lrclib -->
+        <div class="bg-slate-800/50 rounded-lg p-4 mb-6">
+          <p class="text-slate-400 text-sm mb-3">
+            Share your synced lyrics with the community
+          </p>
+          <button id="btn-publish" class="btn btn-secondary w-full flex items-center justify-center gap-2">
+            <span>🌐</span> Publish to lrclib.net
+          </button>
+          <p id="publish-status" class="text-xs text-slate-500 mt-2 text-center hidden"></p>
+        </div>
+
+        <div class="flex justify-between">
+          <button id="btn-back-4" class="btn btn-secondary">← Edit</button>
+          <button id="btn-start-over" class="btn btn-secondary">Start Over</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-800 border-t border-slate-700 px-4 py-2 text-center text-xs text-slate-500">
+      © 2026 Joshua Hendricks. View on <a href="https://github.com/joshooaj/SyncSong" target="_blank" rel="noopener" class="text-slate-400 hover:text-primary-400 transition-colors">GitHub</a>.<br />
+      Your files never leave your browser
+    </footer>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

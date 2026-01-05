@@ -1,0 +1,292 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 
+           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-500 text-white focus:ring-primary-500;
+  }
+
+  .btn-secondary {
+    @apply bg-slate-700 hover:bg-slate-600 text-slate-200 focus:ring-slate-500;
+  }
+
+  .input-field {
+    @apply w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 
+           text-slate-200 text-sm
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+  }
+
+  .drop-zone {
+    @apply border-2 border-dashed border-slate-600 rounded-lg p-8 
+           transition-all duration-200 cursor-pointer
+           hover:border-primary-500 hover:bg-slate-800/50;
+  }
+
+  .drop-zone.drag-over {
+    @apply border-primary-400 bg-primary-900/20;
+  }
+
+  .drop-zone.has-file {
+    @apply border-green-500 bg-green-900/20;
+  }
+
+  .kbd {
+    @apply inline-block px-2 py-0.5 bg-slate-700 rounded text-xs font-mono text-slate-300;
+  }
+
+  .lyric-line {
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer
+           transition-all duration-150 hover:bg-slate-700/50;
+  }
+
+  .lyric-line.active {
+    @apply bg-primary-900/50 border-l-4 border-primary-500;
+  }
+
+  .lyric-line.selected {
+    @apply ring-2 ring-primary-400 bg-slate-700;
+  }
+
+  .lyric-timestamp {
+    @apply text-xs font-mono text-primary-400 min-w-[60px];
+  }
+
+  .lyric-text {
+    @apply flex-1 text-slate-200 min-w-0;
+  }
+
+  .lyric-text.empty {
+    @apply text-slate-500 italic;
+  }
+
+  .lyric-actions {
+    @apply flex gap-1 opacity-0 transition-opacity;
+  }
+
+  .lyric-line:hover .lyric-actions {
+    @apply opacity-100;
+  }
+
+  .lyric-btn {
+    @apply w-6 h-6 flex items-center justify-center rounded
+           hover:bg-slate-600 transition-colors text-xs;
+  }
+
+  .lyric-btn-edit {
+    @apply text-slate-400 hover:text-slate-200;
+  }
+
+  .lyric-btn-delete {
+    @apply text-slate-400 hover:text-red-400;
+  }
+
+  .lyric-edit-input {
+    @apply w-full bg-slate-900 border border-primary-500 rounded px-2 py-1
+           text-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-primary-400;
+  }
+
+  .btn-icon {
+    @apply w-8 h-8 rounded-full bg-slate-700 hover:bg-slate-600 
+           flex items-center justify-center text-slate-400 hover:text-slate-200
+           transition-colors cursor-pointer;
+  }
+
+  /* Toggle switch */
+  .toggle-switch {
+    @apply relative inline-block w-9 h-5;
+  }
+
+  .toggle-switch input {
+    @apply opacity-0 w-0 h-0;
+  }
+
+  .toggle-slider {
+    @apply absolute cursor-pointer inset-0 bg-slate-600 rounded-full transition-colors duration-200;
+  }
+
+  .toggle-slider::before {
+    content: '';
+    @apply absolute h-3.5 w-3.5 left-0.5 bottom-[3px] bg-slate-300 rounded-full transition-transform duration-200;
+  }
+
+  .toggle-switch input:checked + .toggle-slider {
+    @apply bg-primary-600;
+  }
+
+  .toggle-switch input:checked + .toggle-slider::before {
+    @apply translate-x-4 bg-white;
+  }
+
+  .modal {
+    @apply fixed inset-0 z-50 flex items-center justify-center;
+  }
+
+  .modal-backdrop {
+    @apply absolute inset-0 bg-black/60;
+  }
+
+  .modal-content {
+    @apply relative bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4 
+           border border-slate-700 shadow-xl;
+  }
+
+  .step-number {
+    @apply flex-shrink-0 w-7 h-7 rounded-full bg-slate-700 
+           flex items-center justify-center text-sm font-semibold text-slate-400;
+  }
+
+  .step-number.completed {
+    @apply bg-green-600 text-white;
+  }
+
+  .step-number.active {
+    @apply bg-primary-600 text-white;
+  }
+
+  .lyrics-textarea {
+    @apply transition-all duration-200;
+  }
+
+  .lyrics-textarea.drag-over {
+    @apply border-primary-400 bg-primary-900/20;
+  }
+
+  .drop-overlay {
+    @apply absolute inset-0 bg-primary-900/40 border-2 border-primary-400 
+           rounded-lg flex items-center justify-center pointer-events-none;
+  }
+
+  /* Wizard styles */
+  .wizard-step {
+    @apply animate-fadeIn;
+  }
+
+  .drop-zone-large {
+    @apply border-2 border-dashed border-slate-600 rounded-xl p-12 
+           transition-all duration-200 cursor-pointer
+           hover:border-primary-500 hover:bg-slate-800/50
+           min-h-[300px] flex items-center justify-center;
+  }
+
+  .drop-zone-large.drag-over {
+    @apply border-primary-400 bg-primary-900/20 scale-[1.01];
+  }
+
+  .drop-zone-small {
+    @apply border-2 border-dashed border-slate-600 rounded-lg p-4 
+           transition-all duration-200 cursor-pointer
+           hover:border-primary-500 hover:bg-slate-800/50
+           flex items-center justify-center gap-3;
+  }
+
+  .drop-zone-small.drag-over {
+    @apply border-primary-400 bg-primary-900/20;
+  }
+
+  .lyrics-textarea {
+    @apply w-full h-64 bg-slate-800 border-2 border-slate-700 rounded-lg p-3 
+           text-slate-200 font-mono text-sm resize-none 
+           focus:outline-none focus:ring-2 focus:ring-primary-500
+           transition-all duration-200;
+  }
+
+  .lyrics-textarea.drag-over {
+    @apply border-primary-400 border-dashed bg-primary-900/20;
+  }
+
+  .step-indicator {
+    @apply flex flex-col items-center gap-1 text-slate-500 transition-colors cursor-pointer
+           hover:text-slate-400 disabled:cursor-not-allowed;
+  }
+
+  .step-indicator.active {
+    @apply text-primary-400;
+  }
+
+  .step-indicator.completed {
+    @apply text-green-400;
+  }
+
+  .step-num {
+    @apply w-8 h-8 rounded-full border-2 border-current 
+           flex items-center justify-center text-sm font-bold;
+  }
+
+  .step-indicator.active .step-num {
+    @apply bg-primary-600 border-primary-600 text-white;
+  }
+
+  .step-indicator.completed .step-num {
+    @apply bg-green-600 border-green-600 text-white;
+  }
+
+  .step-label {
+    @apply text-xs font-medium;
+  }
+
+  .step-connector {
+    @apply flex-1 h-0.5 bg-slate-700 mx-2;
+  }
+
+  .divider-text {
+    @apply flex items-center gap-3 text-slate-500 text-sm;
+  }
+
+  .divider-text::before,
+  .divider-text::after {
+    content: '';
+    @apply flex-1 h-px bg-slate-700;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-slate-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-500;
+}
+
+/* Smooth scroll for lyrics */
+#lyrics-display {
+  scroll-behavior: smooth;
+}
+
+/* Range input styling */
+input[type="range"] {
+  @apply h-2 rounded-full appearance-none bg-slate-700;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  @apply appearance-none w-4 h-4 rounded-full bg-primary-500 cursor-pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+  @apply w-4 h-4 rounded-full bg-primary-500 cursor-pointer border-none;
+}
