@@ -163,27 +163,26 @@
        style="color-interpolation-filters:sRGB;"
        inkscape:label="Drop Shadow"
        id="filter163"
-       x="-0.0048607595"
-       y="-0.022829964"
-       width="1.0117468"
-       height="1.0551724">
-      <feFlood
-         result="flood"
-         in="SourceGraphic"
-         flood-opacity="1.000000"
-         flood-color="rgb(0,0,0)"
-         id="feFlood162" />
+       x="-0.038886076"
+       y="-0.18263971"
+       width="1.0818228"
+       height="1.3938169">
       <feGaussianBlur
          result="blur"
-         in="SourceGraphic"
-         stdDeviation="1.000000"
+         in="SourceAlpha"
+         stdDeviation="8"
          id="feGaussianBlur162" />
       <feOffset
          result="offset"
          in="blur"
-         dx="1.000000"
-         dy="1.000000"
+         dx="2"
+         dy="3"
          id="feOffset162" />
+      <feFlood
+         result="flood"
+         flood-opacity="0.9"
+         flood-color="rgb(10,10,15)"
+         id="feFlood162" />
       <feComposite
          result="comp1"
          operator="in"
@@ -315,27 +314,26 @@
        style="color-interpolation-filters:sRGB;"
        inkscape:label="Drop Shadow"
        id="filter9"
-       x="-0.027712223"
-       y="-0.13659403"
-       width="1.0569255"
-       height="1.2805869">
-      <feFlood
-         result="flood"
-         in="SourceGraphic"
-         flood-opacity="1.000000"
-         flood-color="rgb(0,0,0)"
-         id="feFlood8" />
+       x="-0.024096638"
+       y="-0.26107649"
+       width="1.0498667"
+       height="1.5584136">
       <feGaussianBlur
          result="blur"
-         in="SourceGraphic"
-         stdDeviation="7.692307"
+         in="SourceAlpha"
+         stdDeviation="6"
          id="feGaussianBlur8" />
       <feOffset
          result="offset"
          in="blur"
-         dx="1.000000"
-         dy="1.000000"
+         dx="1"
+         dy="2"
          id="feOffset8" />
+      <feFlood
+         result="flood"
+         flood-opacity="0.85"
+         flood-color="rgb(10,10,15)"
+         id="feFlood8" />
       <feComposite
          result="comp1"
          operator="in"
@@ -348,6 +346,43 @@
          in="SourceGraphic"
          in2="comp1"
          id="feComposite9" />
+    </filter>
+    <filter
+       style="color-interpolation-filters:sRGB"
+       inkscape:label="Drop Shadow"
+       id="filter9-0"
+       x="-0.025048945"
+       y="-0.44908671"
+       width="1.0518374"
+       height="1.9605466">
+      <feGaussianBlur
+         result="blur"
+         in="SourceAlpha"
+         stdDeviation="6"
+         id="feGaussianBlur8-9" />
+      <feOffset
+         result="offset"
+         in="blur"
+         dx="1"
+         dy="2"
+         id="feOffset8-4" />
+      <feFlood
+         result="flood"
+         flood-opacity="0.85"
+         flood-color="rgb(10,10,15)"
+         id="feFlood8-8" />
+      <feComposite
+         result="comp1"
+         operator="in"
+         in="flood"
+         in2="offset"
+         id="feComposite8-8" />
+      <feComposite
+         result="comp2"
+         operator="over"
+         in="SourceGraphic"
+         in2="comp1"
+         id="feComposite9-2" />
     </filter>
   </defs>
   <!-- Background -->
@@ -418,16 +453,6 @@
      style="fill:url(#linearGradient2);fill-opacity:1;stroke-width:5.70854;filter:url(#filter30)"
      d="m 410.43991,543.89228 c -7.58315,-2.48785 -13.1753,-6.1682 -18.75271,-12.3417 -11.05196,-12.23327 -10.60533,-8.49293 -11.44516,-95.84033 -0.71008,-73.84339 -0.92603,-78.79202 -3.61231,-82.75482 -5.3639,-7.91318 -4.80254,-7.85078 -71.75008,-7.97797 -62.52411,-0.11872 -62.52411,-0.11872 -67.5897,-5.64625 -4.35264,-4.74962 -5.06552,-6.60393 -5.06552,-13.17662 0,-4.20696 1.01559,-9.61312 2.25692,-12.01356 4.80864,-9.29886 3.1011,-9.07896 70.50648,-9.07896 65.45682,0 66.90245,-0.14908 71.83462,-7.40712 2.44971,-3.60483 2.72521,-11.16207 3.41959,-93.78857 0.85805,-102.1116 -0.0228,-95.33855 14.10517,-108.36195 17.06693,-15.731748 44.94861,-13.226384 59.67075,5.36186 8.7984,11.10887 8.48039,7.51626 9.29516,105.01309 0.75518,90.37042 0.75518,90.37042 5.68776,94.77655 4.39032,3.92171 6.02513,4.40614 14.87068,4.40614 12.07579,0 17.82335,-3.35571 20.16043,-11.77056 0.90202,-3.24775 1.56477,-24.30933 1.57819,-50.1552 0.0285,-51.4512 0.58769,-54.03403 14.3705,-66.1661 20.82714,-18.33279 50.82703,-11.8874 64.61292,13.88197 3.18582,5.95508 3.35805,8.33189 4.08138,56.31933 0.75519,50.10189 0.75519,50.10189 4.41681,53.99625 3.21819,3.4226 4.86961,3.89431 13.63496,3.89431 11.98621,0 14.52667,-1.51569 22.69034,-13.53722 18.64094,-27.44997 38.97293,-27.7749 59.17308,-0.94558 11.25599,14.94987 17.83685,17.92471 25.65686,11.59804 3.56567,-2.88476 3.56567,-2.88476 4.32091,-53.24101 0.84753,-56.51639 1.15517,-58.20749 12.68613,-69.73845 9.08046,-9.08045 16.5756,-12.17208 29.60459,-12.21147 17.37724,-0.0513 29.44668,7.48617 38.20934,23.8658 3.18713,5.95754 3.35776,8.32327 4.08136,56.58357 0.75517,50.36615 0.75517,50.36615 5.28632,53.98873 3.91818,3.13249 6.14388,3.6236 16.45242,3.63011 13.23426,0.006 11.66641,1.07269 32.74724,-22.2307 11.93193,-13.18986 25.45397,-17.25228 38.82872,-11.66534 7.24859,3.02792 12.0489,7.71286 20.16329,19.67882 8.14939,12.01742 12.45871,14.2247 27.77124,14.2247 11.52468,0 11.72042,0.0657 17.51876,5.86387 5.20806,5.20806 5.86317,6.68594 5.8582,13.21582 -0.006,8.05782 -3.77984,15.85586 -9.03382,18.66766 -2.20828,1.18183 -23.8188,1.65404 -71.78073,1.56842 -54.91464,-0.0982 -69.61035,0.29114 -73.57327,1.94747 -9.51807,3.97856 -9.41076,3.45487 -10.23837,49.96459 -0.86471,48.5986 -1.46914,51.17875 -14.72105,62.84356 -21.67205,19.07651 -53.72806,11.06293 -66.50957,-16.6265 -1.98629,-4.30304 -2.59511,-13.07701 -3.27311,-47.16919 -0.83293,-41.88285 -0.83293,-41.88285 -4.92853,-45.97444 -4.09559,-4.09159 -4.09559,-4.09159 -55.12899,-4.73682 -74.68706,-0.94437 -69.89909,-4.13847 -69.90749,46.63594 -0.006,38.83934 -0.95714,43.73179 -10.63488,54.7262 -16.59996,18.85855 -45.85541,18.33393 -62.98777,-1.12943 -8.64551,-9.82183 -9.58657,-14.924 -9.91846,-53.77357 -0.35906,-42.03183 -1.23019,-44.15517 -18.9786,-46.25724 -8.34354,-0.98815 -17.23567,2.36117 -20.25686,7.63004 -1.34983,2.35402 -2.03567,24.3909 -2.59093,83.2518 -0.69329,73.48839 -0.97889,80.46011 -3.4838,85.04926 -4.25527,7.79582 -13.08089,16.81466 -19.82415,20.25807 -6.66649,3.40422 -23.08516,5.00067 -29.56526,2.8747 z"
      id="path1" />
-  <text
-     x="598.78815"
-     y="260"
-     text-anchor="middle"
-     font-family="system-ui, '-apple-system', sans-serif"
-     font-size="72px"
-     font-weight="700"
-     fill="url(#accentGradient)"
-     id="text25"
-     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:128px;font-family:Calibri;-inkscape-font-specification:'Calibri Bold';fill:#ffffff;filter:url(#filter163)">SyncSong</text>
   <!-- Tagline -->
   <!-- Subtitle -->
   <!-- Accent line -->
@@ -442,18 +467,42 @@
        x="852.86792"
        y="341.81268"
        sodipodi:role="line">MUXMINUS</tspan></text>
+  <g
+     id="g3"
+     transform="translate(0,28.229257)">
+    <text
+       x="598.3125"
+       y="290.38354"
+       text-anchor="middle"
+       font-family="system-ui, '-apple-system', sans-serif"
+       font-size="72px"
+       font-weight="700"
+       fill="url(#accentGradient)"
+       id="text25"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:128px;font-family:Calibri;-inkscape-font-specification:'Calibri Bold';fill:#ffffff;filter:url(#filter163)">SyncSong</text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:64px;font-family:Calibri;-inkscape-font-specification:Calibri;text-align:center;letter-spacing:0px;word-spacing:1px;writing-mode:lr-tb;direction:ltr;text-anchor:middle;fill:#ffffff;filter:url(#filter9)"
+       x="599.48029"
+       y="366.60272"
+       id="text1"><tspan
+         sodipodi:role="line"
+         x="599.48029"
+         y="366.60272"
+         id="tspan10">Create perfect LRC files</tspan><tspan
+         sodipodi:role="line"
+         x="599.48029"
+         y="446.60272"
+         id="tspan1" /></text>
+  </g>
   <text
      xml:space="preserve"
-     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:64px;font-family:Calibri;-inkscape-font-specification:Calibri;text-align:center;letter-spacing:0px;word-spacing:1px;writing-mode:lr-tb;direction:ltr;text-anchor:middle;fill:#ffffff;filter:url(#filter9)"
-     x="600.31671"
-     y="399.28766"
-     id="text1"><tspan
+     style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:37.3333px;font-family:Calibri;-inkscape-font-specification:'Calibri Light';text-align:center;letter-spacing:0px;word-spacing:1px;writing-mode:lr-tb;direction:ltr;text-anchor:middle;fill:#ffffff;filter:url(#filter9-0)"
+     x="598.13361"
+     y="594.37305"
+     id="text1-5"><tspan
        sodipodi:role="line"
-       x="600.31671"
-       y="399.28766"
-       id="tspan9">Create or fix synchronized</tspan><tspan
-       sodipodi:role="line"
-       x="600.31671"
-       y="479.28766"
-       id="tspan10">lyrics fast and easy!</tspan></text>
+       x="598.13361"
+       y="594.37305"
+       id="tspan1-1">Free &amp; private — runs in your browser</tspan></text>
 </svg>
