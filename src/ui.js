@@ -1006,12 +1006,7 @@ export class UI {
         break;
       case 'Enter':
         e.preventDefault();
-        this.editor.selectNextLine();
-        // Seek to the newly selected line's timestamp
-        const nextLine = this.editor.getSelectedLine();
-        if (nextLine?.time !== null) {
-          this._jumpToTime(nextLine.time);
-        }
+        this._markCurrentLine();
         break;
       case 'Backspace':
         e.preventDefault();
