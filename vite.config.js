@@ -70,7 +70,17 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        // Allow fetching external audio files (like the demo song)
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/c\.madeye\.dev\/.*/i,
+            handler: 'NetworkOnly',
+            options: {
+              cacheName: 'external-audio'
+            }
+          }
+        ]
       }
     })
   ]
