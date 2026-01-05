@@ -1,68 +1,59 @@
-# 🎵 LRC Editor
+# 🎵 SyncSong
 
-A modern web app for editing and syncing LRC lyric files with your music.
+A modern web app for creating and editing synced lyrics in LRC format.
+
+**🌐 Try it now: [syncsong.net](https://syncsong.net/)**
+
+![SyncSong Social Card](public/social-card.png)
 
 ## Features
 
-- **Drag & Drop** - Drop LRC files or plain text lyrics directly into the browser
-- **Audio Support** - Works with MP3, FLAC, OGG, M4A, and WAV files
-- **Easy Timestamp Adjustment** - Use arrow keys or mouse wheel to fine-tune timestamps
-- **Auto-Sync** - Automatically generates timestamps for unsynced lyrics
-- **Metadata Editing** - Edit artist, album, and title information
-- **Export** - Copy to clipboard or download the edited LRC file
-- **PWA Support** - Install as an app on your device
-- **Works Offline** - Your files never leave your browser
+- **🔍 Search LRCLIB** - Find existing lyrics from the community database
+- **📂 Import Lyrics** - Drag & drop LRC/TXT files or paste lyrics directly
+- **🎵 Audio Support** - Works with MP3, FLAC, OGG, M4A, and WAV files
+- **📊 Waveform Visualization** - See your audio with WaveSurfer.js
+- **⌨️ Easy Timestamp Adjustment** - Use arrow keys to fine-tune timestamps by 0.1s
+- **🔄 Auto-Sync** - Automatically generates timestamps for unsynced lyrics
+- **📝 Metadata Editing** - Edit artist, album, and title information
+- **💾 Multiple Export Options** - Copy to clipboard, download LRC, or publish to lrclib.net
+- **📱 PWA Support** - Install as an app on your device
+- **🔒 Privacy First** - Your files never leave your browser
 
-## Getting Started
+## Quick Start
 
-### Prerequisites
-
-- Node.js 18+ 
-- npm or yarn
-
-### Installation
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
-```
-
-## Usage
-
-1. **Load Lyrics** - Drag & drop an LRC file, paste lyrics, or type them in
-2. **Load Audio** - Drag & drop a music file (MP3, FLAC, OGG, M4A)
-3. **Adjust Timestamps** - Click a line to select it, then:
-   - Press `↑`/`←` or scroll up to decrease timestamp by 0.1s
-   - Press `↓`/`→` or scroll down to increase timestamp by 0.1s
-   - Press `Enter` to move to the next line
-   - Press `Space` to play/pause
-4. **Export** - Click "Copy" or "Download" to save your edited lyrics
+1. **Add a Song** - Drop or browse for an audio file
+2. **Add Lyrics** - Search LRCLIB, import a file, or type lyrics
+3. **Sync** - Click lines to jump, use ↑/↓ arrows to adjust timestamps
+4. **Export** - Download, copy, or publish to lrclib.net
 
 ## Keyboard Shortcuts
 
 | Key | Action |
-|-----|--------|
-| `↑` / `←` | Decrease timestamp by 0.1s |
-| `↓` / `→` | Increase timestamp by 0.1s |
+| --- | ------ |
+| `↑` / `↓` | Adjust timestamp by ±0.1s |
 | `Space` | Play / Pause |
 | `Enter` | Next line |
-| `Backspace` | Previous line |
-| Mouse Wheel | Adjust timestamp |
+
+## Development
+
+```bash
+npm install      # Install dependencies
+npm run dev      # Start dev server
+npm run build    # Build for production
+npm run preview  # Preview production build
+```
+
+## Tech Stack
+
+- **Vite** - Build tool and dev server with PWA plugin
+- **Tailwind CSS** - Utility-first CSS framework
+- **Vanilla JavaScript** - No framework overhead
+- **WaveSurfer.js** - Audio waveform visualization
+- **music-metadata** - Extract metadata from audio files
 
 ## LRC Format
 
-The app supports standard LRC format:
-
-```
+```lrc
 [ar:Artist Name]
 [ti:Song Title]
 [al:Album Name]
@@ -71,13 +62,11 @@ The app supports standard LRC format:
 [00:15.67]Second line of lyrics
 ```
 
-## Tech Stack
+See [LRC File Format](https://en.wikipedia.org/wiki/LRC_(file_format)) for the full specification.
 
-- **Vite** - Build tool and dev server
-- **Tailwind CSS** - Styling
-- **Vanilla JavaScript** - No framework overhead
-- **Web Audio API** - Audio playback
-- **PWA** - Installable app support
+## Contributing
+
+Contributions are welcome! The app is deployed via GitHub Actions on pushes to the `main` branch.
 
 ## License
 
