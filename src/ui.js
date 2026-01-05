@@ -993,12 +993,30 @@ export class UI {
     
     switch (e.key) {
       case 'ArrowUp':
+        e.preventDefault();
+        this._exitMarkingMode();
+        this.editor.selectPreviousLine();
+        // Seek to the newly selected line's timestamp
+        const upLine = this.editor.getSelectedLine();
+        if (upLine?.time !== null) {
+          this._jumpToTime(upLine.time);
+        }
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        this._exitMarkingMode();
+        this.editor.selectNextLine();
+        // Seek to the newly selected line's timestamp
+        const downLine = this.editor.getSelectedLine();
+        if (downLine?.time !== null) {
+          this._jumpToTime(downLine.time);
+        }
+        break;
       case 'ArrowLeft':
         e.preventDefault();
         const decreasedTime = this.editor.adjustTimestamp(-0.1);
         this._jumpToTime(decreasedTime);
         break;
-      case 'ArrowDown':
       case 'ArrowRight':
         e.preventDefault();
         const increasedTime = this.editor.adjustTimestamp(0.1);
