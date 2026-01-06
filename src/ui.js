@@ -429,9 +429,9 @@ But you're still dancin' when you hear this song`;
     try {
       console.log('[UI] Starting transcription workflow...');
       
-      // Lazy-load the transcriber module
+      // Lazy-load the transcriber module (runs in Web Worker for UI responsiveness)
       console.log('[UI] Lazy-loading transcriber module...');
-      const { initTranscriber, transcribe, convertToLines, DEFAULT_MODEL, WHISPER_MODELS } = await import('./transcriber.js');
+      const { initTranscriber, transcribe, DEFAULT_MODEL, WHISPER_MODELS } = await import('./transcriber.js');
       
       // Use default model if none specified
       const selectedModel = modelId || DEFAULT_MODEL;
@@ -458,9 +458,9 @@ But you're still dancin' when you hear this song`;
       this._updateTranscribeStatus('Preparing audio for transcription...');
       this._updateTranscribeProgress(30);
       
-      // Transcribe the audio file
+      // Transcribe the audio file (now returns lines directly from worker)
       console.log('[UI] Starting transcription...');
-      const result = await transcribe(this._audioFile, (progress) => {
+      const lines = await transcribe(this._audioFile, (progress) => {
         // Handle status updates (text descriptions)
         if (progress.status) {
           this._updateTranscribeStatus(progress.status);
@@ -490,14 +490,7 @@ But you're still dancin' when you hear this song`;
         }
       });
       
-      console.log('[UI] Transcription complete, processing results...');
-      this._updateTranscribeStatus('Organizing lyrics into lines...');
-      this._updateTranscribeProgress(95);
-      
-      // Convert to lines with timestamps
-      const lines = convertToLines(result);
-      console.log(`[UI] Created ${lines.length} lyric lines`);
-      
+      console.log(`[UI] Transcription complete: ${lines.length} lines`);
       this._updateTranscribeProgress(100);
       
       // Check if we have timestamps

@@ -1,12 +1,12 @@
 /**
  * Transcriber - Lazy-loaded Whisper-based speech-to-text for lyrics
  * 
- * This module is designed to be lazy-loaded only when the user requests transcription.
- * The Whisper model is downloaded on first use and cached by the browser.
+ * This module runs transcription in a Web Worker to keep the UI responsive.
+ * Audio decoding happens on the main thread (Web Audio API), then samples
+ * are transferred to the worker for transcription.
  */
 
-let pipeline = null;
-let transcriber = null;
+let worker = null;
 let currentModel = null;
 
 /**
@@ -22,286 +22,129 @@ export const WHISPER_MODELS = {
 export const DEFAULT_MODEL = 'Xenova/whisper-tiny.en';
 
 /**
+ * Get or create the transcriber worker
+ */
+function getWorker() {
+  if (!worker) {
+    worker = new Worker(
+      new URL('./transcriber-worker.js', import.meta.url),
+      { type: 'module' }
+    );
+  }
+  return worker;
+}
+
+/**
+ * Decode audio file to Float32Array at 16kHz on main thread
+ * @param {File|Blob} file - Audio file
+ * @param {function} onStatus - Status callback
+ * @returns {Promise<{ samples: Float32Array, duration: number }>}
+ */
+async function decodeAudioFile(file, onStatus) {
+  console.log(`[Transcriber] Decoding audio: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`);
+  onStatus?.({ status: 'Decoding audio file...' });
+  
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)({
+    sampleRate: 16000
+  });
+  
+  const arrayBuffer = await file.arrayBuffer();
+  onStatus?.({ status: 'Converting audio to 16kHz...' });
+  
+  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  const duration = audioBuffer.duration;
+  const channelData = audioBuffer.getChannelData(0);
+  
+  await audioContext.close();
+  
+  console.log(`[Transcriber] Audio decoded: ${channelData.length} samples, ${duration.toFixed(1)}s`);
+  return { samples: channelData, duration };
+}
+
+/**
  * Initialize the transcription pipeline (downloads model on first use)
  * @param {function} onProgress - Progress callback ({ status, progress, file, loaded, total })
  * @param {string} [modelId] - Model to use (defaults to whisper-tiny.en)
  * @returns {Promise<void>}
  */
-export async function initTranscriber(onProgress, modelId = DEFAULT_MODEL) {
-  // If already initialized with the same model, skip
-  if (transcriber && currentModel === modelId) return;
-  
-  // If switching models, dispose the old one
-  if (transcriber && currentModel !== modelId) {
-    console.log(`[Transcriber] Switching model from ${currentModel} to ${modelId}`);
-    await disposeTranscriber();
-  }
-  
-  // Lazy-load the transformers library
-  if (!pipeline) {
-    const transformers = await import('@huggingface/transformers');
-    pipeline = transformers.pipeline;
-  }
-  
-  // Create the transcription pipeline with the selected model
-  // Using Xenova models which properly support timestamps
-  // Model will be downloaded and cached on first use
-  console.log(`[Transcriber] Loading model: ${modelId}`);
-  transcriber = await pipeline(
-    'automatic-speech-recognition',
-    modelId,
-    {
-      dtype: 'fp32', // Use fp32 for better compatibility
-      device: 'wasm', // Use WASM for broader compatibility
-      progress_callback: onProgress
+export function initTranscriber(onProgress, modelId = DEFAULT_MODEL) {
+  return new Promise((resolve, reject) => {
+    const w = getWorker();
+    
+    // If same model already loaded, skip
+    if (currentModel === modelId) {
+      resolve();
+      return;
     }
-  );
-  currentModel = modelId;
-}
-
-/**
- * Convert audio file to Float32Array samples at 16kHz (Whisper's expected format)
- * @param {File|Blob} file - Audio file
- * @param {function} onStatus - Status callback for progress updates
- * @returns {Promise<{ samples: Float32Array, duration: number }>}
- */
-async function audioFileToFloat32Array(file, onStatus) {
-  console.log(`[Transcriber] Decoding audio file: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`);
-  onStatus?.('Decoding audio file...');
-  
-  const audioContext = new (window.AudioContext || window.webkitAudioContext)({
-    sampleRate: 16000 // Whisper expects 16kHz
+    
+    const handleMessage = (e) => {
+      const { type, data } = e.data;
+      
+      if (type === 'init-progress') {
+        onProgress?.(data);
+      } else if (type === 'init-complete') {
+        currentModel = modelId;
+        w.removeEventListener('message', handleMessage);
+        resolve();
+      } else if (type === 'error') {
+        w.removeEventListener('message', handleMessage);
+        reject(new Error(data));
+      }
+    };
+    
+    w.addEventListener('message', handleMessage);
+    w.postMessage({ type: 'init', data: { modelId } });
   });
-  
-  console.log('[Transcriber] Reading file into memory...');
-  const arrayBuffer = await file.arrayBuffer();
-  
-  console.log('[Transcriber] Decoding audio data to 16kHz...');
-  onStatus?.('Converting audio to 16kHz...');
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-  
-  const duration = audioBuffer.duration;
-  console.log(`[Transcriber] Audio duration: ${duration.toFixed(1)}s`);
-  
-  // Get the first channel (mono)
-  const channelData = audioBuffer.getChannelData(0);
-  
-  await audioContext.close();
-  
-  console.log(`[Transcriber] Audio decoded: ${channelData.length} samples at 16kHz`);
-  return { samples: channelData, duration };
 }
 
 /**
- * Transcribe audio and return timestamped segments
- * @param {Float32Array|ArrayBuffer|Blob|File|string} audio - Audio data, file, or URL
+ * Transcribe audio file and return lines with timestamps
+ * @param {File|Blob} audioFile - Audio file to transcribe
  * @param {function} onProgress - Progress callback ({ progress, status, chunk, totalChunks })
- * @returns {Promise<{ text: string, chunks: Array<{ text: string, timestamp: [number, number] }> }>}
+ * @returns {Promise<Array<{ time: number|null, text: string }>>}
  */
-export async function transcribe(audio, onProgress) {
-  if (!transcriber) {
-    throw new Error('Transcriber not initialized. Call initTranscriber first.');
-  }
+export async function transcribe(audioFile, onProgress) {
+  const w = getWorker();
   
-  // Convert File/Blob to Float32Array
-  let audioData = audio;
-  let audioDuration = 0;
+  // Decode audio on main thread (Web Audio API not available in workers)
+  const { samples, duration } = await decodeAudioFile(audioFile, onProgress);
   
-  if (audio instanceof File || audio instanceof Blob) {
-    const result = await audioFileToFloat32Array(audio, (status) => {
-      onProgress?.({ status });
-    });
-    audioData = result.samples;
-    audioDuration = result.duration;
-  }
-  
-  // Calculate expected chunks for progress
-  const chunkLength = 30; // seconds per chunk
-  const totalChunks = Math.ceil(audioDuration / chunkLength) || 1;
-  let currentChunk = 0;
-  
-  console.log(`[Transcriber] Starting transcription: ~${totalChunks} chunks expected`);
-  console.log(`[Transcriber] Estimated time: ${(audioDuration * 1.5).toFixed(0)}-${(audioDuration * 3).toFixed(0)}s (depends on device)`);
-  
-  onProgress?.({ 
-    status: `Starting transcription (${audioDuration.toFixed(0)}s of audio)...`,
-    totalChunks,
-    audioDuration
+  // Transfer samples to worker for transcription
+  return new Promise((resolve, reject) => {
+    const handleMessage = (e) => {
+      const { type, data } = e.data;
+      
+      if (type === 'status') {
+        onProgress?.({ status: data });
+      } else if (type === 'transcribe-progress') {
+        onProgress?.(data);
+      } else if (type === 'transcribe-complete') {
+        w.removeEventListener('message', handleMessage);
+        console.log(`[Transcriber] Complete: ${data.lines.length} lines in ${data.duration.toFixed(1)}s`);
+        resolve(data.lines);
+      } else if (type === 'error') {
+        w.removeEventListener('message', handleMessage);
+        reject(new Error(data));
+      }
+    };
+    
+    w.addEventListener('message', handleMessage);
+    
+    // Transfer the samples buffer to the worker (zero-copy)
+    w.postMessage({ 
+      type: 'transcribe', 
+      data: { samples, duration } 
+    }, [samples.buffer]);
   });
-  
-  const startTime = Date.now();
-  
-  // Try with timestamps first, fall back to without if not supported
-  try {
-    const result = await transcriber(audioData, {
-      return_timestamps: 'word',
-      chunk_length_s: chunkLength,
-      stride_length_s: 5,
-      callback_function: (data) => {
-        if (data.progress !== undefined) {
-          currentChunk = Math.floor(data.progress * totalChunks);
-          const elapsed = (Date.now() - startTime) / 1000;
-          const rate = data.progress > 0 ? elapsed / data.progress : 0;
-          const remaining = rate * (1 - data.progress);
-          
-          console.log(`[Transcriber] Progress: ${(data.progress * 100).toFixed(1)}% (chunk ~${currentChunk + 1}/${totalChunks})`);
-          
-          onProgress?.({ 
-            progress: data.progress,
-            chunk: currentChunk + 1,
-            totalChunks,
-            elapsed,
-            remaining: remaining > 0 ? remaining : undefined,
-            status: `Transcribing chunk ${currentChunk + 1} of ${totalChunks}...`
-          });
-        }
-      }
-    });
-    
-    const totalTime = (Date.now() - startTime) / 1000;
-    console.log(`[Transcriber] Transcription complete in ${totalTime.toFixed(1)}s`);
-    console.log(`[Transcriber] Found ${result.chunks?.length || 0} word chunks`);
-    
-    return result;
-  } catch (error) {
-    // If timestamps failed, try without
-    if (error.message?.includes('cross attentions') || error.message?.includes('timestamps')) {
-      console.warn('[Transcriber] Timestamp extraction not supported, retrying without timestamps');
-      onProgress?.({ status: 'Retrying without timestamps...' });
-      
-      const result = await transcriber(audioData, {
-        return_timestamps: false,
-        chunk_length_s: chunkLength,
-        stride_length_s: 5,
-        callback_function: (data) => {
-          if (data.progress !== undefined) {
-            currentChunk = Math.floor(data.progress * totalChunks);
-            onProgress?.({ 
-              progress: data.progress,
-              chunk: currentChunk + 1,
-              totalChunks,
-              status: `Transcribing chunk ${currentChunk + 1} of ${totalChunks}...`
-            });
-          }
-        }
-      });
-      
-      console.log(`[Transcriber] Transcription complete (no timestamps)`);
-      return result;
-    }
-    throw error;
-  }
 }
 
 /**
- * Clean transcribed text by removing artifacts from speech-to-text
- * @param {string} text - Raw transcribed text
- * @returns {string} Cleaned text
+ * Dispose of the worker to free memory
  */
-function cleanTranscribedText(text) {
-  return text
-    // Remove music note emojis (various Unicode music symbols)
-    .replace(/[♪♫♬♩🎵🎶]/g, '')
-    // Remove mood/scene descriptions like (upbeat music), [applause], etc.
-    .replace(/\([^)]*(?:music|applause|laughter|silence|pause|singing|humming|whistling)[^)]*\)/gi, '')
-    .replace(/\[[^\]]*(?:music|applause|laughter|silence|pause|singing|humming|whistling)[^\]]*\]/gi, '')
-    // Clean up extra whitespace
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-/**
- * Convert Whisper output to LRC-compatible lines
- * Groups words into lines based on pauses and timing
- * @param {object} result - Whisper transcription result
- * @param {number} [maxLineLength=80] - Max characters per line
- * @param {number} [pauseThreshold=1.5] - Seconds of pause to trigger new line
- * @returns {Array<{ time: number, text: string }>}
- */
-export function convertToLines(result, maxLineLength = 80, pauseThreshold = 1.5) {
-  if (!result.chunks || result.chunks.length === 0) {
-    // If no chunks, split by sentences/newlines
-    const lines = result.text.split(/[.!?\n]+/).filter(s => s.trim());
-    return lines.map((text, i) => ({
-      time: null, // No timestamps available
-      text: cleanTranscribedText(text)
-    })).filter(l => l.text); // Remove empty lines after cleaning
-  }
-  
-  const lines = [];
-  let currentLine = [];
-  let lineStartTime = null;
-  let lastEndTime = 0;
-  
-  for (const chunk of result.chunks) {
-    let word = cleanTranscribedText(chunk.text);
-    if (!word) continue;
-    
-    const [startTime, endTime] = chunk.timestamp;
-    
-    // Start a new line if:
-    // 1. This is the first word
-    // 2. There's a significant pause
-    // 3. Current line is too long
-    const currentText = currentLine.join(' ');
-    const wouldBeTooLong = (currentText + ' ' + word).length > maxLineLength;
-    const significantPause = lineStartTime !== null && (startTime - lastEndTime) > pauseThreshold;
-    
-    if (currentLine.length > 0 && (significantPause || wouldBeTooLong)) {
-      // Save current line
-      const lineText = currentText.trim();
-      if (lineText) {
-        lines.push({
-          time: lineStartTime,
-          text: lineText
-        });
-      }
-      currentLine = [];
-      lineStartTime = null;
-    }
-    
-    // Add word to current line
-    if (lineStartTime === null) {
-      lineStartTime = startTime;
-    }
-    currentLine.push(word);
-    lastEndTime = endTime;
-  }
-  
-  // Don't forget the last line
-  if (currentLine.length > 0) {
-    const lineText = currentLine.join(' ').trim();
-    if (lineText) {
-      lines.push({
-        time: lineStartTime,
-        text: lineText
-      });
-    }
-  }
-  
-  return lines;
-}
-
-/**
- * Check if WebGPU is available (for better performance)
- * @returns {Promise<boolean>}
- */
-export async function isWebGPUAvailable() {
-  if (!navigator.gpu) return false;
-  try {
-    const adapter = await navigator.gpu.requestAdapter();
-    return adapter !== null;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Dispose of the transcriber to free memory
- */
-export async function disposeTranscriber() {
-  if (transcriber) {
-    await transcriber.dispose();
-    transcriber = null;
+export function disposeTranscriber() {
+  if (worker) {
+    worker.terminate();
+    worker = null;
+    currentModel = null;
   }
 }
