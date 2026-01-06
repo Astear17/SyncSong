@@ -159,9 +159,53 @@
           <button id="btn-open-lyrics" class="btn btn-secondary flex-1 flex items-center justify-center gap-2">
             <span>📂</span> Open File
           </button>
-          <button id="btn-transcribe" class="btn btn-secondary flex-1 flex items-center justify-center gap-2">
-            <span>🎙️</span> Auto-Transcribe
-          </button>
+          <!-- Split button: Transcribe + model dropdown -->
+          <div class="flex-1 flex relative" id="transcribe-btn-group">
+            <button id="btn-transcribe" class="btn btn-secondary flex-1 flex items-center justify-center gap-2 rounded-r-none border-r-0">
+              <span>🎙️</span> Auto-Transcribe
+            </button>
+            <button id="btn-transcribe-dropdown" class="btn btn-secondary px-2 rounded-l-none border-l border-slate-600" aria-label="Select model">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <!-- Dropdown menu -->
+            <div id="transcribe-dropdown-menu" class="hidden absolute top-full right-0 mt-1 w-64 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50">
+              <div class="p-2 border-b border-slate-700">
+                <p class="text-xs text-slate-400 font-medium">Select AI Model</p>
+              </div>
+              <div class="p-1">
+                <button class="model-option w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors" data-model="Xenova/whisper-tiny.en">
+                  <div class="flex justify-between items-center">
+                    <span class="text-slate-200">Tiny</span>
+                    <span class="text-xs text-slate-500">~39 MB</span>
+                  </div>
+                  <p class="text-xs text-slate-400">Fastest, good for clear audio</p>
+                </button>
+                <button class="model-option w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors" data-model="Xenova/whisper-base.en">
+                  <div class="flex justify-between items-center">
+                    <span class="text-slate-200">Base</span>
+                    <span class="text-xs text-slate-500">~74 MB</span>
+                  </div>
+                  <p class="text-xs text-slate-400">Better accuracy</p>
+                </button>
+                <button class="model-option w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors" data-model="Xenova/whisper-small.en">
+                  <div class="flex justify-between items-center">
+                    <span class="text-slate-200">Small</span>
+                    <span class="text-xs text-slate-500">~244 MB</span>
+                  </div>
+                  <p class="text-xs text-slate-400">Good balance of speed & accuracy</p>
+                </button>
+                <button class="model-option w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors" data-model="Xenova/whisper-medium.en">
+                  <div class="flex justify-between items-center">
+                    <span class="text-slate-200">Medium</span>
+                    <span class="text-xs text-slate-500">~769 MB</span>
+                  </div>
+                  <p class="text-xs text-slate-400">High accuracy, slower</p>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Transcription progress panel (shown when transcribing) -->

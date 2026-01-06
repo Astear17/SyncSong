@@ -7,14 +7,35 @@
 
 let pipeline = null;
 let transcriber = null;
+let currentModel = null;
+
+/**
+ * Available Whisper models (English-only for lyrics)
+ */
+export const WHISPER_MODELS = {
+  'Xenova/whisper-tiny.en': { name: 'Tiny', size: '~39 MB' },
+  'Xenova/whisper-base.en': { name: 'Base', size: '~74 MB' },
+  'Xenova/whisper-small.en': { name: 'Small', size: '~244 MB' },
+  'Xenova/whisper-medium.en': { name: 'Medium', size: '~769 MB' },
+};
+
+export const DEFAULT_MODEL = 'Xenova/whisper-tiny.en';
 
 /**
  * Initialize the transcription pipeline (downloads model on first use)
  * @param {function} onProgress - Progress callback ({ status, progress, file, loaded, total })
+ * @param {string} [modelId] - Model to use (defaults to whisper-tiny.en)
  * @returns {Promise<void>}
  */
-export async function initTranscriber(onProgress) {
-  if (transcriber) return; // Already initialized
+export async function initTranscriber(onProgress, modelId = DEFAULT_MODEL) {
+  // If already initialized with the same model, skip
+  if (transcriber && currentModel === modelId) return;
+  
+  // If switching models, dispose the old one
+  if (transcriber && currentModel !== modelId) {
+    console.log(`[Transcriber] Switching model from ${currentModel} to ${modelId}`);
+    await disposeTranscriber();
+  }
   
   // Lazy-load the transformers library
   if (!pipeline) {
@@ -22,18 +43,20 @@ export async function initTranscriber(onProgress) {
     pipeline = transformers.pipeline;
   }
   
-  // Create the transcription pipeline with whisper-tiny for speed/size balance
-  // Using Xenova model which properly supports timestamps
-  // Model will be downloaded and cached on first use (~39MB)
+  // Create the transcription pipeline with the selected model
+  // Using Xenova models which properly support timestamps
+  // Model will be downloaded and cached on first use
+  console.log(`[Transcriber] Loading model: ${modelId}`);
   transcriber = await pipeline(
     'automatic-speech-recognition',
-    'Xenova/whisper-tiny.en',
+    modelId,
     {
       dtype: 'fp32', // Use fp32 for better compatibility
       device: 'wasm', // Use WASM for broader compatibility
       progress_callback: onProgress
     }
   );
+  currentModel = modelId;
 }
 
 /**

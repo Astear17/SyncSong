@@ -41,6 +41,9 @@ export class UI {
       transcribeStatus: document.getElementById('transcribe-status'),
       transcribeProgressBar: document.getElementById('transcribe-progress-bar'),
       btnTranscribe: document.getElementById('btn-transcribe'),
+      btnTranscribeDropdown: document.getElementById('btn-transcribe-dropdown'),
+      transcribeDropdownMenu: document.getElementById('transcribe-dropdown-menu'),
+      transcribeBtnGroup: document.getElementById('transcribe-btn-group'),
       
       // Step 2: Lyrics
       btnSearchLrclib: document.getElementById('btn-search-lrclib'),
@@ -130,9 +133,31 @@ export class UI {
       this._loadDemo();
     });
     
-    // Step 2: Auto-Transcribe button
+    // Step 2: Auto-Transcribe button (uses default model)
     this.elements.btnTranscribe?.addEventListener('click', () => {
       this._startTranscription();
+    });
+    
+    // Step 2: Transcribe dropdown toggle
+    this.elements.btnTranscribeDropdown?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this._toggleTranscribeDropdown();
+    });
+    
+    // Step 2: Model selection from dropdown
+    document.querySelectorAll('.model-option').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const modelId = btn.dataset.model;
+        this._closeTranscribeDropdown();
+        this._startTranscription(modelId);
+      });
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!this.elements.transcribeBtnGroup?.contains(e.target)) {
+        this._closeTranscribeDropdown();
+      }
     });
     
     // Step 2: lrclib search
@@ -365,9 +390,24 @@ But you're still dancin' when you hear this song`;
   }
   
   /**
-   * Start AI transcription of the loaded audio file
+   * Toggle transcription model dropdown
    */
-  async _startTranscription() {
+  _toggleTranscribeDropdown() {
+    this.elements.transcribeDropdownMenu?.classList.toggle('hidden');
+  }
+  
+  /**
+   * Close transcription model dropdown
+   */
+  _closeTranscribeDropdown() {
+    this.elements.transcribeDropdownMenu?.classList.add('hidden');
+  }
+  
+  /**
+   * Start AI transcription of the loaded audio file
+   * @param {string} [modelId] - Model to use (defaults to whisper-tiny.en)
+   */
+  async _startTranscription(modelId) {
     if (!this._audioFile) {
       console.error('No audio file loaded for transcription');
       alert('Please add an audio file first before transcribing.');
@@ -379,9 +419,10 @@ But you're still dancin' when you hear this song`;
       this.elements.lyricsInput.value = '';
     }
     
-    // Show progress panel, disable button
+    // Show progress panel, disable buttons
     this.elements.transcribePanel?.classList.remove('hidden');
     this.elements.btnTranscribe?.setAttribute('disabled', 'true');
+    this.elements.btnTranscribeDropdown?.setAttribute('disabled', 'true');
     this._updateTranscribeStatus('Loading AI model...');
     this._updateTranscribeProgress(0);
     
@@ -390,14 +431,19 @@ But you're still dancin' when you hear this song`;
       
       // Lazy-load the transcriber module
       console.log('[UI] Lazy-loading transcriber module...');
-      const { initTranscriber, transcribe, convertToLines } = await import('./transcriber.js');
+      const { initTranscriber, transcribe, convertToLines, DEFAULT_MODEL, WHISPER_MODELS } = await import('./transcriber.js');
+      
+      // Use default model if none specified
+      const selectedModel = modelId || DEFAULT_MODEL;
+      const modelInfo = WHISPER_MODELS[selectedModel];
+      console.log(`[UI] Using model: ${selectedModel} (${modelInfo?.size || 'unknown size'})`);
       
       // Initialize (downloads model on first use)
       console.log('[UI] Initializing Whisper model...');
       await initTranscriber((progress) => {
         if (progress.status === 'progress' && progress.progress !== undefined) {
           const pct = Math.round(progress.progress);
-          this._updateTranscribeStatus(`Downloading model... ${pct}%`);
+          this._updateTranscribeStatus(`Downloading ${modelInfo?.name || 'model'}... ${pct}%`);
           this._updateTranscribeProgress(pct * 0.3); // First 30% is download
         } else if (progress.status === 'done') {
           console.log('[UI] Model file downloaded:', progress.file);
@@ -407,7 +453,7 @@ But you're still dancin' when you hear this song`;
         } else if (progress.file) {
           this._updateTranscribeStatus(`Loading ${progress.file.split('/').pop()}...`);
         }
-      });
+      }, selectedModel);
       
       this._updateTranscribeStatus('Preparing audio for transcription...');
       this._updateTranscribeProgress(30);
@@ -480,6 +526,7 @@ But you're still dancin' when you hear this song`;
       setTimeout(() => {
         this.elements.transcribePanel?.classList.add('hidden');
         this.elements.btnTranscribe?.removeAttribute('disabled');
+        this.elements.btnTranscribeDropdown?.removeAttribute('disabled');
         this._updateTranscribeProgress(0);
       }, 1500);
       
@@ -491,6 +538,7 @@ But you're still dancin' when you hear this song`;
       setTimeout(() => {
         this.elements.transcribePanel?.classList.add('hidden');
         this.elements.btnTranscribe?.removeAttribute('disabled');
+        this.elements.btnTranscribeDropdown?.removeAttribute('disabled');
         this._updateTranscribeProgress(0);
       }, 3000);
     }
@@ -657,15 +705,15 @@ But you're still dancin' when you hear this song`;
     
     // Step-specific actions
     if (step === 2) {
-      // Enable/disable transcribe button based on whether we have a file to transcribe
-      if (this.elements.btnTranscribe) {
-        if (this._audioFile) {
-          this.elements.btnTranscribe.removeAttribute('disabled');
-          this.elements.btnTranscribe.title = '';
-        } else {
-          this.elements.btnTranscribe.setAttribute('disabled', 'true');
-          this.elements.btnTranscribe.title = 'Transcription requires an audio file (not available for demo/URL)';
-        }
+      // Enable/disable transcribe buttons based on whether we have a file to transcribe
+      if (this._audioFile) {
+        this.elements.btnTranscribe?.removeAttribute('disabled');
+        this.elements.btnTranscribeDropdown?.removeAttribute('disabled');
+        this.elements.btnTranscribe && (this.elements.btnTranscribe.title = '');
+      } else {
+        this.elements.btnTranscribe?.setAttribute('disabled', 'true');
+        this.elements.btnTranscribeDropdown?.setAttribute('disabled', 'true');
+        this.elements.btnTranscribe && (this.elements.btnTranscribe.title = 'Transcription requires an audio file (not available for demo/URL)');
       }
     } else if (step === 3) {
       this._renderLyrics(this.editor.lines);
