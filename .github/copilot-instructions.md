@@ -25,6 +25,7 @@ The app is deployed to GitHub Pages at: https://syncsong.net/
 - **Vanilla JavaScript (ES Modules)** - No framework, keeping it lightweight
 - **WaveSurfer.js** - Audio waveform visualization
 - **music-metadata** - Extract metadata from audio files
+- **Transformers.js** - Client-side AI for optional lyrics transcription (lazy-loaded)
 - **Web Audio API / HTML5 Audio** - Native browser audio playback
 - **File API / Drag & Drop API** - Native browser file handling
 
@@ -43,6 +44,7 @@ SyncSong/
 │   ├── lrc-parser.js       # Parse/serialize LRC format, timestamp utilities
 │   ├── audio-player.js     # AudioPlayer class - playback controls, waveform, events
 │   ├── editor.js           # LyricEditor class - timestamp adjustment, line selection
+│   ├── transcriber.js      # Lazy-loaded Whisper-based speech-to-text (optional)
 │   └── ui.js               # UI class - DOM manipulation, event handlers, drag/drop
 ├── public/
 │   ├── favicon.ico         # Site favicon
@@ -89,8 +91,9 @@ it on their devices.
 ### User Workflow (4-Step Wizard)
 
 1. **Step 1: Song** - Drop or browse for audio file, metadata extracted automatically
+   - Optional: AI transcription with Whisper to auto-generate lyrics with timestamps
 2. **Step 2: Lyrics** - Search LRCLIB, open file, or paste/type lyrics; edit metadata
-3. **Step 3: Sync** - Click lines to jump, use ↑/↓ arrows to adjust timestamps by 0.1s
+3. **Step 3: Sync** - Click lines to jump, use ↑/↓ arrows to navigate, ←/→ to adjust timestamps
 4. **Step 4: Export** - Preview, copy, download, or publish to lrclib.net
 
 ## Coding Conventions

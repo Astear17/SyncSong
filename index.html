@@ -152,13 +152,30 @@
         <div id="player-slot-2"></div>
 
         <!-- Import buttons row -->
-        <div class="flex gap-2 mb-4">
+        <div class="flex flex-wrap gap-2 mb-4">
           <button id="btn-search-lrclib" class="btn btn-secondary flex-1 flex items-center justify-center gap-2">
             <span>🔍</span> Search LRCLIB
           </button>
           <button id="btn-open-lyrics" class="btn btn-secondary flex-1 flex items-center justify-center gap-2">
             <span>📂</span> Open File
           </button>
+          <button id="btn-transcribe" class="btn btn-secondary flex-1 flex items-center justify-center gap-2">
+            <span>🎙️</span> Auto-Transcribe
+          </button>
+        </div>
+
+        <!-- Transcription progress panel (shown when transcribing) -->
+        <div id="transcribe-panel" class="hidden mb-4">
+          <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+            <div class="flex items-center gap-2 text-sm text-slate-400">
+              <div class="animate-spin h-4 w-4 border-2 border-primary-400 border-t-transparent rounded-full"></div>
+              <span id="transcribe-status">Initializing...</span>
+            </div>
+            <div class="mt-2 h-2 bg-slate-700 rounded-full overflow-hidden">
+              <div id="transcribe-progress-bar" class="h-full bg-primary-500 transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <p class="text-slate-500 text-xs mt-2">First run downloads ~40MB AI model (cached for future use)</p>
+          </div>
         </div>
 
         <!-- lrclib search panel -->

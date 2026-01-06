@@ -36,6 +36,12 @@ export class UI {
       btnChangeSong: document.getElementById('btn-change-song'),
       btnTryDemo: document.getElementById('btn-try-demo'),
       
+      // Step 2: Transcription (panel shown when transcribing)
+      transcribePanel: document.getElementById('transcribe-panel'),
+      transcribeStatus: document.getElementById('transcribe-status'),
+      transcribeProgressBar: document.getElementById('transcribe-progress-bar'),
+      btnTranscribe: document.getElementById('btn-transcribe'),
+      
       // Step 2: Lyrics
       btnSearchLrclib: document.getElementById('btn-search-lrclib'),
       btnOpenLyrics: document.getElementById('btn-open-lyrics'),
@@ -114,9 +120,19 @@ export class UI {
     this.elements.btnChangeSong?.addEventListener('click', () => {
       this.elements.songInfo.classList.add('hidden');
       this.elements.audioDropZone.classList.remove('hidden');
+      // Reset transcription state
+      this._audioFile = null;
+      this.elements.transcribePanel?.classList.remove('hidden');
+      this.elements.transcribeProgress?.classList.add('hidden');
+      this.elements.transcribeActions?.classList.remove('hidden');
     });
     this.elements.btnTryDemo?.addEventListener('click', () => {
       this._loadDemo();
+    });
+    
+    // Step 2: Auto-Transcribe button
+    this.elements.btnTranscribe?.addEventListener('click', () => {
+      this._startTranscription();
     });
     
     // Step 2: lrclib search
@@ -220,6 +236,9 @@ export class UI {
   }
   
   async _handleAudioFile(file) {
+    // Store the file for potential transcription
+    this._audioFile = file;
+    
     this.player.loadFile(file);
     
     // Show song info
@@ -230,7 +249,7 @@ export class UI {
     // Extract metadata from audio file
     await this._extractAudioMetadata(file);
     
-    // Auto-advance to step 2
+    // Auto-advance to Step 2 where user can add lyrics
     this._goToStep(2);
   }
   
@@ -305,6 +324,16 @@ But you're still dancin' when you hear this song`;
     this.elements.songInfo.classList.remove('hidden');
     this.elements.audioDropZone.classList.add('hidden');
     
+    // Fetch the demo audio as a File so transcription is available
+    try {
+      const response = await fetch(demoSongUrl);
+      const blob = await response.blob();
+      this._audioFile = new File([blob], 'demo-song.mp3', { type: 'audio/mpeg' });
+    } catch (err) {
+      console.warn('Could not fetch demo audio for transcription:', err);
+      this._audioFile = null;
+    }
+    
     // Set metadata
     this.audioMetadata = {
       artist: demoArtist,
@@ -333,6 +362,156 @@ But you're still dancin' when you hear this song`;
     
     // Go to step 2
     this._goToStep(2);
+  }
+  
+  /**
+   * Start AI transcription of the loaded audio file
+   */
+  async _startTranscription() {
+    if (!this._audioFile) {
+      console.error('No audio file loaded for transcription');
+      alert('Please add an audio file first before transcribing.');
+      return;
+    }
+    
+    // Clear existing lyrics to make room for transcription
+    if (this.elements.lyricsInput) {
+      this.elements.lyricsInput.value = '';
+    }
+    
+    // Show progress panel, disable button
+    this.elements.transcribePanel?.classList.remove('hidden');
+    this.elements.btnTranscribe?.setAttribute('disabled', 'true');
+    this._updateTranscribeStatus('Loading AI model...');
+    this._updateTranscribeProgress(0);
+    
+    try {
+      console.log('[UI] Starting transcription workflow...');
+      
+      // Lazy-load the transcriber module
+      console.log('[UI] Lazy-loading transcriber module...');
+      const { initTranscriber, transcribe, convertToLines } = await import('./transcriber.js');
+      
+      // Initialize (downloads model on first use)
+      console.log('[UI] Initializing Whisper model...');
+      await initTranscriber((progress) => {
+        if (progress.status === 'progress' && progress.progress !== undefined) {
+          const pct = Math.round(progress.progress);
+          this._updateTranscribeStatus(`Downloading model... ${pct}%`);
+          this._updateTranscribeProgress(pct * 0.3); // First 30% is download
+        } else if (progress.status === 'done') {
+          console.log('[UI] Model file downloaded:', progress.file);
+        } else if (progress.status === 'ready') {
+          console.log('[UI] Model ready');
+          this._updateTranscribeStatus('Model loaded, preparing audio...');
+        } else if (progress.file) {
+          this._updateTranscribeStatus(`Loading ${progress.file.split('/').pop()}...`);
+        }
+      });
+      
+      this._updateTranscribeStatus('Preparing audio for transcription...');
+      this._updateTranscribeProgress(30);
+      
+      // Transcribe the audio file
+      console.log('[UI] Starting transcription...');
+      const result = await transcribe(this._audioFile, (progress) => {
+        // Handle status updates (text descriptions)
+        if (progress.status) {
+          this._updateTranscribeStatus(progress.status);
+        }
+        
+        // Handle numeric progress
+        if (progress.progress !== undefined) {
+          // 30-95% is transcription progress
+          const pct = 30 + Math.round(progress.progress * 65);
+          this._updateTranscribeProgress(pct);
+          
+          // Build detailed status message
+          let status = `Transcribing: ${Math.round(progress.progress * 100)}%`;
+          if (progress.chunk && progress.totalChunks) {
+            status = `Transcribing chunk ${progress.chunk}/${progress.totalChunks}`;
+          }
+          if (progress.remaining && progress.remaining > 0) {
+            const mins = Math.floor(progress.remaining / 60);
+            const secs = Math.round(progress.remaining % 60);
+            if (mins > 0) {
+              status += ` (~${mins}m ${secs}s remaining)`;
+            } else {
+              status += ` (~${secs}s remaining)`;
+            }
+          }
+          this._updateTranscribeStatus(status);
+        }
+      });
+      
+      console.log('[UI] Transcription complete, processing results...');
+      this._updateTranscribeStatus('Organizing lyrics into lines...');
+      this._updateTranscribeProgress(95);
+      
+      // Convert to lines with timestamps
+      const lines = convertToLines(result);
+      console.log(`[UI] Created ${lines.length} lyric lines`);
+      
+      this._updateTranscribeProgress(100);
+      
+      // Check if we have timestamps
+      const hasTimestamps = lines.some(line => line.time !== null);
+      
+      // Populate the lyrics textarea for user to review/edit
+      if (this.elements.lyricsInput) {
+        // If we have timestamps, format as LRC so they're preserved
+        if (hasTimestamps) {
+          const lrcLines = lines.map(l => {
+            if (l.time !== null) {
+              // formatTimestamp already includes brackets, so just concatenate
+              return `${formatTimestamp(l.time)}${l.text}`;
+            }
+            return l.text;
+          });
+          this.elements.lyricsInput.value = lrcLines.join('\n');
+        } else {
+          this.elements.lyricsInput.value = lines.map(l => l.text).join('\n');
+        }
+        this._updateLyricsNextButton();
+      }
+      
+      // Hide progress panel, show success briefly
+      this._updateTranscribeStatus(`✓ Transcribed ${lines.length} lines`);
+      setTimeout(() => {
+        this.elements.transcribePanel?.classList.add('hidden');
+        this.elements.btnTranscribe?.removeAttribute('disabled');
+        this._updateTranscribeProgress(0);
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Transcription failed:', error);
+      this._updateTranscribeStatus(`Error: ${error.message}`);
+      
+      // Hide progress panel after showing error
+      setTimeout(() => {
+        this.elements.transcribePanel?.classList.add('hidden');
+        this.elements.btnTranscribe?.removeAttribute('disabled');
+        this._updateTranscribeProgress(0);
+      }, 3000);
+    }
+  }
+  
+  /**
+   * Update transcription status text
+   */
+  _updateTranscribeStatus(text) {
+    if (this.elements.transcribeStatus) {
+      this.elements.transcribeStatus.textContent = text;
+    }
+  }
+  
+  /**
+   * Update transcription progress bar
+   */
+  _updateTranscribeProgress(percent) {
+    if (this.elements.transcribeProgressBar) {
+      this.elements.transcribeProgressBar.style.width = `${Math.min(100, percent)}%`;
+    }
   }
   
   async _extractAudioMetadata(file) {
@@ -477,7 +656,18 @@ But you're still dancin' when you hear this song`;
     }
     
     // Step-specific actions
-    if (step === 3) {
+    if (step === 2) {
+      // Enable/disable transcribe button based on whether we have a file to transcribe
+      if (this.elements.btnTranscribe) {
+        if (this._audioFile) {
+          this.elements.btnTranscribe.removeAttribute('disabled');
+          this.elements.btnTranscribe.title = '';
+        } else {
+          this.elements.btnTranscribe.setAttribute('disabled', 'true');
+          this.elements.btnTranscribe.title = 'Transcription requires an audio file (not available for demo/URL)';
+        }
+      }
+    } else if (step === 3) {
       this._renderLyrics(this.editor.lines);
       this.elements.lyricsDisplay.focus();
     } else if (step === 4) {
