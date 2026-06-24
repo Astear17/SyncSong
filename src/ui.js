@@ -16,6 +16,7 @@ export class UI {
     this._seekTimeoutId = null; // Debounce timeout for user seeking
     this._isMarkingMode = false; // Prevent auto-selection during tap-to-sync marking
     this.audioMetadata = null; // Extracted audio file metadata (artist, title, album, duration)
+    this._wordStatusTimeout = null;
     
     // Cache DOM elements
     this.elements = {
@@ -86,6 +87,19 @@ export class UI {
       publishStatus: document.getElementById('publish-status'),
       btnBack4: document.getElementById('btn-back-4'),
       btnStartOver: document.getElementById('btn-start-over'),
+      
+      // Word mode
+      wordModeToggle: document.getElementById('word-mode-toggle'),
+      wordPanel: document.getElementById('word-panel'),
+      wordPanelLabel: document.getElementById('word-panel-label'),
+      wordChips: document.getElementById('word-chips'),
+      wordStatus: document.getElementById('word-status'),
+      btnWordGenerateLine: document.getElementById('btn-word-generate-line'),
+      btnWordGenerateAll: document.getElementById('btn-word-generate-all'),
+      btnWordClear: document.getElementById('btn-word-clear'),
+      syncHintsLine: document.getElementById('sync-hints-line'),
+      wordHintsLine: document.getElementById('word-hints-line'),
+      exportModeEnhancedLabel: document.getElementById('export-mode-enhanced-label'),
     };
     
     this._setupEventListeners();
@@ -216,6 +230,21 @@ export class UI {
     this.elements.btnCopy?.addEventListener('click', () => this._copyToClipboard());
     this.elements.btnDownload?.addEventListener('click', () => this._downloadLRC());
     this.elements.btnPublish?.addEventListener('click', () => this._publishToLrclib());
+    
+    // Export mode radio
+    document.querySelectorAll('input[name="export-mode"]').forEach(radio => {
+      radio.addEventListener('change', () => this._updateLrcPreview());
+    });
+    
+    // Word mode toggle
+    this.elements.wordModeToggle?.addEventListener('change', () => {
+      this._toggleWordMode(this.elements.wordModeToggle.checked);
+    });
+    
+    // Word panel buttons
+    this.elements.btnWordGenerateLine?.addEventListener('click', () => this._generateWordTimingsLine());
+    this.elements.btnWordGenerateAll?.addEventListener('click', () => this._generateWordTimingsAll());
+    this.elements.btnWordClear?.addEventListener('click', () => this._clearWordTimingsLine());
     
     // Global keyboard shortcuts
     document.addEventListener('keydown', (e) => {
@@ -711,9 +740,25 @@ But you're still dancin' when you hear this song`;
     } else if (step === 3) {
       this._renderLyrics(this.editor.lines);
       this.elements.lyricsDisplay.focus();
+      if (this.editor.wordMode) {
+        this.editor.ensureWordsForLine(this.editor.selectedIndex);
+        this._renderWordChips();
+      }
+      this._updateWordModeUI();
     } else if (step === 4) {
       // Pause audio since player isn't available on export page
       this.player.pause();
+      
+      // Show/hide enhanced LRC option based on whether word timings exist
+      if (this.elements.exportModeEnhancedLabel) {
+        const hasWords = this.editor.hasAnyWordTimings;
+        this.elements.exportModeEnhancedLabel.classList.toggle('hidden', !hasWords);
+        if (!hasWords) {
+          const stdRadio = document.querySelector('input[name="export-mode"][value="standard"]');
+          if (stdRadio) stdRadio.checked = true;
+        }
+      }
+      
       this._updateLrcPreview();
     }
   }
@@ -771,11 +816,12 @@ But you're still dancin' when you hear this song`;
     const content = this.elements.lyricsInput.value.trim();
     if (!content) return;
     
-    const { parseLRC, isSyncedLyrics, parsePlainLyrics } = await import('./lrc-parser.js');
+    const { parseLRC, parseEnhancedLRC, isSyncedLyrics, parsePlainLyrics } = await import('./lrc-parser.js');
     let data;
     
     if (isSyncedLyrics(content)) {
-      data = parseLRC(content);
+      // Use enhanced parser to pick up <mm:ss.xx> word tags if present
+      data = parseEnhancedLRC(content);
     } else {
       data = {
         metadata: {},
@@ -936,10 +982,18 @@ But you're still dancin' when you hear this song`;
     this.editor.onLineSelect = (index, line) => {
       this._highlightSelectedLine(index);
       this._updateLineCounter();
+      if (this.editor.wordMode) {
+        this.editor.ensureWordsForLine(index);
+        this._renderWordChips();
+      }
     };
     
     this.editor.onLineUpdate = (index, line) => {
       this._updateLineDisplay(index, line);
+    };
+    
+    this.editor.onWordUpdate = (lineIndex, wordIndex) => {
+      this._renderWordChips();
     };
   }
   
@@ -954,6 +1008,11 @@ But you're still dancin' when you hear this song`;
       
       const playingIndex = this.editor.updatePlayingLine(time);
       this._highlightPlayingLine(playingIndex);
+      
+      // Highlight current word in word mode
+      if (this.editor.wordMode) {
+        this._highlightPlayingWord(time);
+      }
       
       // Only auto-select line if playing (and not in tap-to-sync mode)
       if (this.player.isPlaying && playingIndex >= 0 && playingIndex !== this.editor.selectedIndex && !this._isMarkingMode) {
@@ -1000,16 +1059,19 @@ But you're still dancin' when you hear this song`;
       return;
     }
     
-    const html = lines.map((line, index) => `
+    const html = lines.map((line, index) => {
+      const hasWords = line.words && line.words.some(w => w.startTime != null);
+      const wordBadge = hasWords ? ' <span class="text-[10px] text-green-500 font-mono" title="Has word timings">W</span>' : '';
+      return `
       <div class="lyric-line ${index === this.editor.selectedIndex ? 'selected' : ''}" data-index="${index}">
         <span class="lyric-timestamp">${line.time !== null ? formatTimestamp(line.time) : '--:--'}</span>
-        <span class="lyric-text ${!line.text.trim() ? 'empty' : ''}">${this._escapeHtml(line.text) || '(instrumental)'}</span>
+        <span class="lyric-text ${!line.text.trim() ? 'empty' : ''}">${this._escapeHtml(line.text) || '(instrumental)'}${wordBadge}</span>
         <div class="lyric-actions">
           <button class="lyric-btn lyric-btn-edit" data-action="edit" data-index="${index}" title="Edit line">✏️</button>
           <button class="lyric-btn lyric-btn-delete" data-action="delete" data-index="${index}" title="Delete line">🗑️</button>
         </div>
       </div>
-    `).join('');
+    `}).join('');
     
     this.elements.lyricsDisplay.innerHTML = html;
     
@@ -1113,10 +1175,14 @@ But you're still dancin' when you hear this song`;
     
     const saveEdit = () => {
       const newText = input.value.trim();
-      this.editor.updateLineText(index, newText);
+      const result = this.editor.updateLineText(index, newText);
       textEl.innerHTML = this._escapeHtml(newText) || '(instrumental)';
       textEl.classList.toggle('empty', !newText);
       this.editingLineIndex = null;
+      if (result === 'words_reset') {
+        this._showWordStatus('Word timings reset for this line');
+        if (this.editor.wordMode) this._renderWordChips();
+      }
       this.elements.lyricsDisplay.focus();
     };
     
@@ -1226,10 +1292,14 @@ But you're still dancin' when you hear this song`;
     
     const saveEdit = () => {
       const newText = input.value.trim();
-      this.editor.updateLineText(index, newText);
+      const result = this.editor.updateLineText(index, newText);
       textEl.innerHTML = this._escapeHtml(newText) || '(instrumental)';
       textEl.classList.toggle('empty', !newText);
       this.editingLineIndex = null;
+      if (result === 'words_reset') {
+        this._showWordStatus('Word timings reset for this line');
+        if (this.editor.wordMode) this._renderWordChips();
+      }
       this.elements.lyricsDisplay.focus();
     };
     
@@ -1327,11 +1397,44 @@ But you're still dancin' when you hear this song`;
   _handleKeyboard(e) {
     if (!this.editor.hasLyrics) return;
     
+    const wordMode = this.editor.wordMode;
+    
+    // Word mode: Tab marks current word and advances, Shift+Tab goes to previous word
+    if (wordMode) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          this._selectPreviousWord();
+        } else {
+          this._markCurrentWord();
+        }
+        return;
+      }
+      
+      // Alt+Arrow for word timestamp adjustment
+      if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault();
+        const delta = e.key === 'ArrowLeft' ? -0.1 : 0.1;
+        const fineDelta = e.shiftKey ? delta / 10 : delta;
+        this.editor.adjustWordTimestamp(fineDelta);
+        this._renderWordChips();
+        return;
+      }
+      
+      // In word mode, Enter still marks line (not word)
+      // ArrowUp/Down navigate lines and update word panel
+    }
+    
     switch (e.key) {
       case 'ArrowUp':
         e.preventDefault();
         this._exitMarkingMode();
         this.editor.selectPreviousLine();
+        if (wordMode) {
+          this.editor.selectedWordIndex = 0;
+          this.editor.ensureWordsForLine(this.editor.selectedIndex);
+          this._renderWordChips();
+        }
         // Seek to the newly selected line's timestamp
         const upLine = this.editor.getSelectedLine();
         if (upLine?.time !== null) {
@@ -1342,6 +1445,11 @@ But you're still dancin' when you hear this song`;
         e.preventDefault();
         this._exitMarkingMode();
         this.editor.selectNextLine();
+        if (wordMode) {
+          this.editor.selectedWordIndex = 0;
+          this.editor.ensureWordsForLine(this.editor.selectedIndex);
+          this._renderWordChips();
+        }
         // Seek to the newly selected line's timestamp
         const downLine = this.editor.getSelectedLine();
         if (downLine?.time !== null) {
@@ -1365,6 +1473,11 @@ But you're still dancin' when you hear this song`;
       case 'Backspace':
         e.preventDefault();
         this.editor.selectPreviousLine();
+        if (wordMode) {
+          this.editor.selectedWordIndex = 0;
+          this.editor.ensureWordsForLine(this.editor.selectedIndex);
+          this._renderWordChips();
+        }
         // Seek to the newly selected line's timestamp
         const prevLine = this.editor.getSelectedLine();
         if (prevLine?.time !== null) {
@@ -1402,7 +1515,8 @@ But you're still dancin' when you hear this song`;
   }
   
   /**
-   * Mark current line with current playback time and advance (tap-to-sync)
+   * Mark current line with current playback time and advance (tap-to-sync).
+   * When word mode is ON this syncs one word instead of the whole line.
    */
   _markCurrentLine() {
     if (!this.editor.hasLyrics) return;
@@ -1411,7 +1525,12 @@ But you're still dancin' when you hear this song`;
     this._isMarkingMode = true;
     
     const currentTime = this.player.currentTime;
-    this.editor.markAndAdvance(currentTime);
+    
+    if (this.editor.wordMode) {
+      this._markCurrentWord();
+    } else {
+      this.editor.markAndAdvance(currentTime);
+    }
     
     // Start playing if not already (auto-play on mark)
     if (!this.player.isPlaying) {
@@ -1428,14 +1547,16 @@ But you're still dancin' when you hear this song`;
   
   _updateLrcPreview() {
     if (this.elements.lrcPreview && this.editor.hasLyrics) {
-      this.elements.lrcPreview.textContent = this.editor.toLRC();
+      const isEnhanced = document.querySelector('input[name="export-mode"]:checked')?.value === 'enhanced';
+      this.elements.lrcPreview.textContent = this.editor.toLRC(isEnhanced);
     }
   }
   
   async _copyToClipboard() {
     if (!this.editor.hasLyrics) return;
     
-    const lrc = this.editor.toLRC();
+    const isEnhanced = document.querySelector('input[name="export-mode"]:checked')?.value === 'enhanced';
+    const lrc = this.editor.toLRC(isEnhanced);
     
     try {
       await navigator.clipboard.writeText(lrc);
@@ -1453,7 +1574,8 @@ But you're still dancin' when you hear this song`;
   _downloadLRC() {
     if (!this.editor.hasLyrics) return;
     
-    const lrc = this.editor.toLRC();
+    const isEnhanced = document.querySelector('input[name="export-mode"]:checked')?.value === 'enhanced';
+    const lrc = this.editor.toLRC(isEnhanced);
     const blob = new Blob([lrc], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     
@@ -1486,6 +1608,8 @@ But you're still dancin' when you hear this song`;
   _startOver() {
     this.player.pause();
     this.editor.clear();
+    this.editor.setWordMode(false);
+    if (this.elements.wordModeToggle) this.elements.wordModeToggle.checked = false;
     this.elements.lyricsInput.value = '';
     this.elements.metaArtist.value = '';
     this.elements.metaTitle.value = '';
@@ -1494,5 +1618,170 @@ But you're still dancin' when you hear this song`;
     this.elements.audioDropZone.classList.remove('hidden');
     this.elements.btnNext2.disabled = true;
     this._goToStep(1);
+  }
+  
+  // ─── Word Mode ─────────────────────────────────────────────────────────
+
+  _toggleWordMode(enabled) {
+    this.editor.setWordMode(enabled);
+    this._updateWordModeUI();
+    if (enabled) {
+      this.editor.ensureWordsForLine(this.editor.selectedIndex);
+      this._renderWordChips();
+    } else {
+      if (this.elements.wordPanel) this.elements.wordPanel.classList.add('hidden');
+    }
+    this._updateMarkButtonLabel();
+  }
+  
+  _updateWordModeUI() {
+    const wm = this.editor.wordMode;
+    if (this.elements.wordPanel) {
+      this.elements.wordPanel.classList.toggle('hidden', !wm);
+    }
+    if (this.elements.syncHintsLine) {
+      this.elements.syncHintsLine.classList.toggle('hidden', wm);
+    }
+    if (this.elements.wordHintsLine) {
+      this.elements.wordHintsLine.classList.toggle('hidden', !wm);
+    }
+  }
+  
+  _updateMarkButtonLabel() {
+    const btn = this.elements.btnMark;
+    if (!btn) return;
+    const label = btn.querySelector('.text-xs');
+    if (!label) return;
+    label.textContent = this.editor.wordMode ? 'Sync Word' : 'Mark';
+    btn.title = this.editor.wordMode
+      ? 'Sync current word and advance to next'
+      : 'Set timestamp to current time and advance';
+  }
+  
+  _renderWordChips() {
+    if (!this.elements.wordChips) return;
+    const line = this.editor.lines[this.editor.selectedIndex];
+    if (!line || !line.words || line.words.length === 0) {
+      this.elements.wordChips.innerHTML = '<span class="text-xs text-slate-500">No words for this line</span>';
+      if (this.elements.wordPanelLabel) this.elements.wordPanelLabel.textContent = 'Word timing';
+      return;
+    }
+    
+    if (this.elements.wordPanelLabel) {
+      this.elements.wordPanelLabel.textContent = `Word timing — Line ${this.editor.selectedIndex + 1}`;
+    }
+    
+    const chips = line.words.map((w, i) => {
+      const isSelected = i === this.editor.selectedWordIndex;
+      const isTimed = w.startTime != null;
+      const cls = [
+        'word-chip',
+        isSelected ? 'selected' : '',
+        isTimed ? 'timed' : ''
+      ].filter(Boolean).join(' ');
+      const tsLabel = isTimed ? ` <span class="word-ts">${formatTimestamp(w.startTime)}</span>` : '';
+      return `<span class="${cls}" data-word-index="${i}">${this._escapeHtml(w.text)}${tsLabel}</span>`;
+    }).join('');
+    
+    this.elements.wordChips.innerHTML = chips;
+    
+    this.elements.wordChips.querySelectorAll('.word-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const idx = parseInt(chip.dataset.wordIndex, 10);
+        this.editor.selectWord(idx);
+        this._renderWordChips();
+        this.elements.lyricsDisplay?.focus();
+      });
+    });
+  }
+  
+  _markCurrentWord() {
+    if (!this.editor.wordMode) return;
+    
+    const currentTime = this.player.currentTime;
+    const result = this.editor.syncCurrentWordAndAdvance(currentTime);
+    
+    // Refresh UI
+    this._renderWordChips();
+    this._renderLyrics(this.editor.lines);
+    this._highlightSelectedLine(this.editor.selectedIndex);
+    
+    if (result.action === 'finished') {
+      this._showWordStatus('All words synced');
+    }
+  }
+  
+  _selectPreviousWord() {
+    if (!this.editor.wordMode) return;
+    this.editor.selectPreviousWord();
+    this._renderWordChips();
+  }
+  
+  _generateWordTimingsLine() {
+    this.editor.generateWordTimingsForLine(this.editor.selectedIndex);
+    this.editor.selectedWordIndex = 0;
+    this._renderWordChips();
+    this._renderLyrics(this.editor.lines);
+    this._showWordStatus('Generated word timings for this line');
+  }
+  
+  _generateWordTimingsAll() {
+    this.editor.generateAllWordTimings();
+    this._renderWordChips();
+    this._renderLyrics(this.editor.lines);
+    this._showWordStatus('Generated word timings for all lines');
+  }
+  
+  _clearWordTimingsLine() {
+    this.editor.clearWordTimingsForLine(this.editor.selectedIndex);
+    this._renderWordChips();
+    this._renderLyrics(this.editor.lines);
+    this._showWordStatus('Cleared word timings for this line');
+  }
+  
+  _highlightPlayingWord(currentTime) {
+    if (!this.elements.wordChips) return;
+    const line = this.editor.lines[this.editor.currentPlayingIndex];
+    if (!line || !line.words) return;
+    
+    if (this.editor.currentPlayingIndex !== this.editor.selectedIndex) return;
+    
+    const chips = this.elements.wordChips.querySelectorAll('.word-chip');
+    chips.forEach(chip => chip.classList.remove('playing'));
+    
+    const wordIdx = this.editor.getActiveWordIndex(currentTime);
+    if (wordIdx >= 0 && chips[wordIdx]) {
+      chips[wordIdx].classList.add('playing');
+    }
+    
+    // Also highlight word text in the lyrics display
+    const lineEl = this.elements.lyricsDisplay?.querySelector(`[data-index="${this.editor.currentPlayingIndex}"]`);
+    if (lineEl) {
+      const textEl = lineEl.querySelector('.lyric-text');
+      if (textEl && line.words) {
+        const activeIdx = this.editor.getActiveWordIndex(currentTime);
+        let html = '';
+        for (let i = 0; i < line.words.length; i++) {
+          const w = line.words[i];
+          const prefix = w.leadingSpace || '';
+          if (i === activeIdx) {
+            html += `${prefix}<span class="lyric-word-highlight">${this._escapeHtml(w.text)}</span>`;
+          } else {
+            html += `${prefix}${this._escapeHtml(w.text)}`;
+          }
+        }
+        if (html) textEl.innerHTML = html;
+      }
+    }
+  }
+  
+  _showWordStatus(msg) {
+    if (!this.elements.wordStatus) return;
+    this.elements.wordStatus.textContent = msg;
+    this.elements.wordStatus.classList.remove('hidden');
+    if (this._wordStatusTimeout) clearTimeout(this._wordStatusTimeout);
+    this._wordStatusTimeout = setTimeout(() => {
+      this.elements.wordStatus.classList.add('hidden');
+    }, 2000);
   }
 }

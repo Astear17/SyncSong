@@ -285,12 +285,25 @@
 
         <!-- Keyboard hints and Add Line button -->
         <div class="mt-3 mb-3 flex items-center justify-between text-xs text-slate-500">
-          <div class="hidden sm:block">
+          <div class="hidden sm:block" id="sync-hints-line">
             <kbd class="kbd">←</kbd><kbd class="kbd">→</kbd> adjust · 
             <kbd class="kbd">↑</kbd><kbd class="kbd">↓</kbd> navigate · 
             <kbd class="kbd">Enter</kbd> mark
           </div>
+          <div class="hidden sm:block" id="word-hints-line">
+            <kbd class="kbd">Tab</kbd> mark word · 
+            <kbd class="kbd">Shift+Tab</kbd> prev · 
+            <kbd class="kbd">Alt+←</kbd><kbd class="kbd">Alt+→</kbd> ±0.1s · 
+            <kbd class="kbd">Alt+Shift+←</kbd><kbd class="kbd">Alt+Shift+→</kbd> ±0.01s
+          </div>
           <div class="flex items-center gap-2 ml-auto">
+            <label class="flex items-center gap-1.5 cursor-pointer select-none" title="Word-by-word mode">
+              <span class="text-xs text-slate-400">Word mode</span>
+              <div class="toggle-switch">
+                <input type="checkbox" id="word-mode-toggle">
+                <span class="toggle-slider"></span>
+              </div>
+            </label>
             <span id="line-counter"></span>
             <button id="btn-add-line" class="btn btn-secondary text-xs px-2 py-1" title="Add new line at current time">
               + Add Line
@@ -305,6 +318,20 @@
           tabindex="0"
         >
           <p class="text-slate-500 text-center py-8">Loading...</p>
+        </div>
+
+        <!-- Word-by-word editing panel -->
+        <div id="word-panel" class="hidden mt-2 bg-slate-800 border border-slate-700 rounded-lg p-3">
+          <div class="flex items-center justify-between mb-2">
+            <span id="word-panel-label" class="text-xs text-slate-400">Word timing</span>
+            <div class="flex items-center gap-1">
+              <button id="btn-word-generate-line" class="btn btn-secondary text-xs px-2 py-1" title="Generate rough word timings for this line">Auto Line</button>
+              <button id="btn-word-generate-all" class="btn btn-secondary text-xs px-2 py-1" title="Generate rough word timings for all lines">Auto All</button>
+              <button id="btn-word-clear" class="btn btn-secondary text-xs px-2 py-1" title="Clear word timings for this line">Clear</button>
+            </div>
+          </div>
+          <div id="word-chips" class="flex flex-wrap gap-1.5 mb-2"></div>
+          <div id="word-status" class="text-xs text-slate-500 hidden"></div>
         </div>
 
         <!-- Mobile-friendly sync controls -->
@@ -338,7 +365,17 @@
 
         <!-- Preview -->
         <div class="mb-6">
-          <label class="block text-sm text-slate-400 mb-2">PREVIEW</label>
+          <div class="flex items-center justify-between mb-2">
+            <label class="block text-sm text-slate-400">PREVIEW</label>
+            <div class="flex items-center gap-2" id="export-mode-group">
+              <label class="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer">
+                <input type="radio" name="export-mode" value="standard" checked class="accent-primary-500"> Standard LRC
+              </label>
+              <label class="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer" id="export-mode-enhanced-label">
+                <input type="radio" name="export-mode" value="enhanced" class="accent-primary-500"> Enhanced LRC
+              </label>
+            </div>
+          </div>
           <pre id="lrc-preview" class="bg-slate-800 border border-slate-700 rounded-lg p-4 text-sm font-mono text-slate-300 h-48 overflow-y-auto whitespace-pre-wrap"></pre>
         </div>
 
