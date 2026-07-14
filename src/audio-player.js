@@ -195,6 +195,23 @@ export class AudioPlayer {
   seekRelative(delta) {
     this.seek(this.currentTime + delta);
   }
+
+  /**
+   * Get the current playback time directly from WaveSurfer when available.
+   * Falls back to the cached time updated by the timeupdate event.
+   * @returns {number}
+   */
+  getCurrentTime() {
+    if (this.wavesurfer && typeof this.wavesurfer.getCurrentTime === 'function') {
+      const currentTime = this.wavesurfer.getCurrentTime();
+      if (Number.isFinite(currentTime)) {
+        this.currentTime = currentTime;
+        return currentTime;
+      }
+    }
+
+    return this.currentTime;
+  }
   
   /**
    * Set volume

@@ -101,6 +101,7 @@ export function parseLRC(content) {
       for (const ts of timestamps) {
         lyrics.push({
           time: parseTimestamp(ts),
+          endTime: null,
           text: text
         });
       }
@@ -111,6 +112,7 @@ export function parseLRC(content) {
     if (!timestampPattern.test(trimmed)) {
       lyrics.push({
         time: null,
+        endTime: null,
         text: trimmed
       });
     }
@@ -149,6 +151,7 @@ export function generateTimestamps(lines, duration) {
   
   return lines.map((line, index) => ({
     time: line.time !== null ? line.time : index * interval,
+    endTime: line.endTime ?? null,
     text: line.text
   }));
 }
@@ -193,6 +196,71 @@ export function serializeLRC(data) {
 }
 
 /**
+ * Format seconds to SRT timestamp string HH:MM:SS,mmm
+ * @param {number} seconds - Time in seconds
+ * @returns {string}
+ */
+export function formatSRTTimestamp(seconds) {
+  const safeSeconds = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
+  const totalMilliseconds = Math.round(safeSeconds * 1000);
+  const hours = Math.floor(totalMilliseconds / 3600000);
+  const minutes = Math.floor((totalMilliseconds % 3600000) / 60000);
+  const secs = Math.floor((totalMilliseconds % 60000) / 1000);
+  const millis = totalMilliseconds % 1000;
+
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')},${millis.toString().padStart(3, '0')}`;
+}
+
+/**
+ * Serialize timestamped lyric lines to SRT subtitle format.
+ * @param {Array<{time: number|null, text: string}>} lines - Lines sorted by start time
+ * @param {number} audioDuration - Audio duration in seconds
+ * @returns {string}
+ */
+export function serializeSRT(lines, audioDuration) {
+  const epsilon = 0.02; // Keep adjacent cues separated by 20ms to avoid renderer overlap.
+  const maxDuration = 4;
+  const timedLines = lines.filter(line => line.time !== null && Number.isFinite(line.time));
+  const output = [];
+
+  for (let i = 0; i < timedLines.length; i++) {
+    const line = timedLines[i];
+    const start = Math.max(0, line.time);
+    let end = Number.isFinite(line.endTime) && line.endTime > start ? line.endTime : null;
+
+    if (end === null) {
+      let fallbackEnd = start + maxDuration;
+      const nextStart = timedLines[i + 1]?.time;
+
+      if (Number.isFinite(nextStart) && nextStart > start) {
+        fallbackEnd = Math.min(fallbackEnd, nextStart - epsilon);
+      }
+
+      if (Number.isFinite(audioDuration) && audioDuration > start) {
+        fallbackEnd = Math.min(fallbackEnd, audioDuration);
+      }
+
+      end = Math.max(start, fallbackEnd);
+    }
+
+    if (Number.isFinite(audioDuration) && audioDuration > start) {
+      end = Math.min(end, audioDuration);
+    } else {
+      end = Math.max(start, end);
+    }
+
+    output.push(
+      String(i + 1),
+      `${formatSRTTimestamp(start)} --> ${formatSRTTimestamp(end)}`,
+      line.text || '',
+      ''
+    );
+  }
+
+  return output.join('\n').trimEnd();
+}
+
+/**
  * Parse plain text lyrics (one line per line)
  * @param {string} content - Plain text content
  * @returns {Array<{time: number|null, text: string}>}
@@ -202,6 +270,7 @@ export function parsePlainLyrics(content) {
     .split(/\r?\n/)
     .map(line => ({
       time: null,
+      endTime: null,
       text: line.trim()
     }))
     .filter(line => line.text.length > 0 || true); // Keep empty lines for structure
@@ -343,6 +412,7 @@ export function parseEnhancedLRC(content) {
         for (const ts of timestamps) {
           lyrics.push({
             time: parseTimestamp(ts),
+            endTime: null,
             text: displayText,
             words: words.map(w => ({ ...w }))
           });
@@ -350,7 +420,7 @@ export function parseEnhancedLRC(content) {
       } else {
         const text = afterTimestamps.trim();
         for (const ts of timestamps) {
-          lyrics.push({ time: parseTimestamp(ts), text });
+          lyrics.push({ time: parseTimestamp(ts), endTime: null, text });
         }
       }
       continue;
@@ -360,9 +430,9 @@ export function parseEnhancedLRC(content) {
       if (angleTagPattern.test(trimmed)) {
         const words = tokenizeWithTimestamps(trimmed);
         const displayText = reconstructText(words);
-        lyrics.push({ time: null, text: displayText, words });
+        lyrics.push({ time: null, endTime: null, text: displayText, words });
       } else {
-        lyrics.push({ time: null, text: trimmed });
+        lyrics.push({ time: null, endTime: null, text: trimmed });
       }
     }
   }

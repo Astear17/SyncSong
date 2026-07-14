@@ -1046,6 +1046,10 @@ But you're still dancin' when you hear this song`;
       if (playIcon) playIcon.classList.remove('hidden');
       if (pauseIcon) pauseIcon.classList.add('hidden');
       
+      if (this._isMarkingMode) {
+        this.editor.setEndTime(this.editor.selectedIndex, this.player.getCurrentTime());
+      }
+      
       // Exit marking mode when paused
       this._exitMarkingMode();
     };
@@ -1242,6 +1246,7 @@ But you're still dancin' when you hear this song`;
     // Insert a new line after the given index
     const newLine = {
       time: newTime,
+      endTime: null,
       text,
       id: Date.now()
     };
@@ -1524,10 +1529,10 @@ But you're still dancin' when you hear this song`;
     // Enable marking mode to prevent auto-selection from overriding
     this._isMarkingMode = true;
     
-    const currentTime = this.player.currentTime;
+    const currentTime = this.player.getCurrentTime();
     
     if (this.editor.wordMode) {
-      this._markCurrentWord();
+      this._markCurrentWord(currentTime);
     } else {
       this.editor.markAndAdvance(currentTime);
     }
@@ -1547,19 +1552,30 @@ But you're still dancin' when you hear this song`;
   
   _updateLrcPreview() {
     if (this.elements.lrcPreview && this.editor.hasLyrics) {
-      const isEnhanced = document.querySelector('input[name="export-mode"]:checked')?.value === 'enhanced';
-      this.elements.lrcPreview.textContent = this.editor.toLRC(isEnhanced);
+      this.elements.lrcPreview.textContent = this._getExportContent();
     }
+  }
+
+  _getSelectedExportMode() {
+    return document.querySelector('input[name="export-mode"]:checked')?.value || 'standard';
+  }
+
+  _getExportContent() {
+    const mode = this._getSelectedExportMode();
+    if (mode === 'srt') {
+      return this.editor.toSRT(this.player.duration);
+    }
+
+    return this.editor.toLRC(mode === 'enhanced');
   }
   
   async _copyToClipboard() {
     if (!this.editor.hasLyrics) return;
     
-    const isEnhanced = document.querySelector('input[name="export-mode"]:checked')?.value === 'enhanced';
-    const lrc = this.editor.toLRC(isEnhanced);
+    const exportContent = this._getExportContent();
     
     try {
-      await navigator.clipboard.writeText(lrc);
+      await navigator.clipboard.writeText(exportContent);
       const btn = this.elements.btnCopy;
       const originalHTML = btn.innerHTML;
       btn.innerHTML = '<span>✅</span> Copied!';
@@ -1574,14 +1590,15 @@ But you're still dancin' when you hear this song`;
   _downloadLRC() {
     if (!this.editor.hasLyrics) return;
     
-    const isEnhanced = document.querySelector('input[name="export-mode"]:checked')?.value === 'enhanced';
-    const lrc = this.editor.toLRC(isEnhanced);
-    const blob = new Blob([lrc], { type: 'text/plain;charset=utf-8' });
+    const mode = this._getSelectedExportMode();
+    const exportContent = this._getExportContent();
+    const extension = mode === 'srt' ? 'srt' : 'lrc';
+    const blob = new Blob([exportContent], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     
     const filename = this.editor.metadata.title 
-      ? `${this.editor.metadata.artist || 'Unknown'} - ${this.editor.metadata.title}.lrc`
-      : 'lyrics.lrc';
+      ? `${this.editor.metadata.artist || 'Unknown'} - ${this.editor.metadata.title}.${extension}`
+      : `lyrics.${extension}`;
     
     const a = document.createElement('a');
     a.href = url;
@@ -1695,10 +1712,9 @@ But you're still dancin' when you hear this song`;
     });
   }
   
-  _markCurrentWord() {
+  _markCurrentWord(currentTime = this.player.getCurrentTime()) {
     if (!this.editor.wordMode) return;
     
-    const currentTime = this.player.currentTime;
     const result = this.editor.syncCurrentWordAndAdvance(currentTime);
     
     // Refresh UI

@@ -60,6 +60,7 @@ function convertToLines(result, maxLineLength = 80, pauseThreshold = 1.5) {
     const lines = result.text.split(/[.!?\n]+/).filter(s => s.trim());
     return lines.map((text) => ({
       time: null,
+      endTime: null,
       text: cleanTranscribedText(text)
     })).filter(l => l.text);
   }
@@ -82,7 +83,7 @@ function convertToLines(result, maxLineLength = 80, pauseThreshold = 1.5) {
     if (currentLine.length > 0 && (significantPause || wouldBeTooLong)) {
       const lineText = currentText.trim();
       if (lineText) {
-        lines.push({ time: lineStartTime, text: lineText });
+        lines.push({ time: lineStartTime, endTime: lastEndTime || null, text: lineText });
       }
       currentLine = [];
       lineStartTime = null;
@@ -98,7 +99,7 @@ function convertToLines(result, maxLineLength = 80, pauseThreshold = 1.5) {
   if (currentLine.length > 0) {
     const lineText = currentLine.join(' ').trim();
     if (lineText) {
-      lines.push({ time: lineStartTime, text: lineText });
+      lines.push({ time: lineStartTime, endTime: lastEndTime || null, text: lineText });
     }
   }
   

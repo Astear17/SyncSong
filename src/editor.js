@@ -2,7 +2,7 @@
  * Editor - Core editing logic for LRC timestamps
  */
 
-import { formatTimestamp, generateTimestamps, serializeLRC, serializeEnhancedLRC, hasWordTimings } from './lrc-parser.js';
+import { formatTimestamp, generateTimestamps, serializeLRC, serializeEnhancedLRC, serializeSRT, hasWordTimings } from './lrc-parser.js';
 
 export class LyricEditor {
   constructor() {
@@ -30,6 +30,7 @@ export class LyricEditor {
     this.metadata = { ...data.metadata };
     this.lines = data.lines.map((line, index) => ({
       ...line,
+      endTime: line.endTime ?? null,
       id: index,
       words: line.words ? line.words.map(w => ({ ...w })) : undefined
     }));
@@ -99,9 +100,23 @@ export class LyricEditor {
    */
   markAndAdvance(currentTime) {
     const markedIndex = this.selectedIndex;
-    
-    // Set timestamp for current line
-    this.setTimestamp(markedIndex, currentTime);
+    const previousIndex = markedIndex - 1;
+    const currentLine = this.lines[markedIndex];
+
+    if (!currentLine) return { markedIndex, nextIndex: this.selectedIndex };
+
+    if (currentLine.time !== null && currentTime > currentLine.time) {
+      this.setEndTime(markedIndex, currentTime);
+    } else if (previousIndex >= 0) {
+      this.setEndTime(previousIndex, currentTime);
+
+      // Set timestamp for current line only the first time it is marked.
+      if (currentLine.time === null) {
+        this.setTimestamp(markedIndex, currentTime);
+      }
+    } else if (currentLine.time === null) {
+      this.setTimestamp(markedIndex, currentTime);
+    }
     
     // Advance to next line (if not at end)
     if (this.selectedIndex < this.lines.length - 1) {
@@ -186,6 +201,25 @@ export class LyricEditor {
       this.onLineUpdate(index, this.lines[index]);
     }
   }
+
+  /**
+   * Set end timestamp for a specific line
+   * @param {number} index - Line index
+   * @param {number} time - New end timestamp
+   */
+  setEndTime(index, time) {
+    if (index < 0 || index >= this.lines.length) return;
+
+    const line = this.lines[index];
+    const endTime = Math.max(0, time);
+    if (line.time === null || !Number.isFinite(endTime) || endTime <= line.time) return;
+
+    this.lines[index] = { ...line, endTime };
+
+    if (this.onLineUpdate) {
+      this.onLineUpdate(index, this.lines[index]);
+    }
+  }
   
   /**
    * Update the currently playing line based on current time
@@ -244,6 +278,23 @@ export class LyricEditor {
     
     return serializeLRC(data);
   }
+
+  /**
+   * Get SRT formatted output
+   * @param {number} audioDuration - Audio duration in seconds
+   * @returns {string}
+   */
+  toSRT(audioDuration) {
+    // Sort lines by time before serializing
+    const sortedLines = [...this.lines].sort((a, b) => {
+      if (a.time === null && b.time === null) return 0;
+      if (a.time === null) return 1;
+      if (b.time === null) return -1;
+      return a.time - b.time;
+    });
+
+    return serializeSRT(sortedLines, audioDuration);
+  }
   
   /**
    * Add a new line at the specified time
@@ -254,6 +305,7 @@ export class LyricEditor {
   addLine(time, text = '') {
     const newLine = {
       time,
+      endTime: null,
       text,
       id: Date.now() // Unique ID
     };
